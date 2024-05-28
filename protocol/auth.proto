@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+option go_package = "github.com/stateprism/prism_ca/protocol";
+
+package client;
+
+service CAClient {
+  rpc Authenticate(AuthRequest) returns (AuthReply) {}
+  rpc RequestCert(CertRequest) returns (CertReply) {}
+}
+
+message AuthRequest {
+  string authpTicket = 1;
+  string username = 2;
+  string password = 3;
+}
+
+message AuthReply {
+  fixed64 authTime = 1;
+  fixed64 authUntil = 2;
+  string authToken = 3;
+}
+
+message CertRequest {
+  string authToken = 1;
+  fixed64 requestedValidity = 2;
+  string extendedValidityJustification = 3;
+}
+
+message CertReply {
+  bytes cert = 1;
+  fixed64 validUntil = 2;
+}
