@@ -1,0 +1,10 @@
+{
+	"ca_host": "localhost:5000",
+	"hmac_key": "ZjBoW1OfD11lOhNvYZlEmw",
+	"auth_provider": "pam",
+	"server_id": "test_server",
+	"allowed_key_types": [
+		"ecdsa",
+		"ed25519"
+	]
+}

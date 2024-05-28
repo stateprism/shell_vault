@@ -1,44 +1,30 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"net"
-	"net/netip"
 	"os"
 
-	pb "github.com/stateprism/prism_ca/protocol"
+	"github.com/stateprism/prisma_ca/jsonprovider"
+	pb "github.com/stateprism/prisma_ca/protocol"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type ClientConfig struct {
-	CAHost string `json:"ca_host"`
-	CAPort string `json:"ca_port"`
-}
-
 func main() {
-	clientConfig, err := LoadClientConfigFromFile()
-	var caAddr string
+	configFile := os.Args[1]
+	clientConfig, err := jsonprovider.New(configFile)
 	if err != nil {
-		fmt.Println("Error loading client config file:", err)
+		fmt.Println("Error reading client configuration:", err)
 		panic(err)
 	}
 
-	_, err = netip.ParseAddr(clientConfig.CAHost)
+	caAddr, err := clientConfig.GetString("ca_host")
 	if err != nil {
-		caAddr, err = ResolveDnsToIp(clientConfig.CAHost)
-		if err != nil {
-			fmt.Println("Error resolving DNS to IP:", err)
-			panic(err)
-		}
+		fmt.Println("Error reading CA address from configuration:", err)
+		panic(err)
 	}
-
-	if caAddr == "" {
-		caAddr = clientConfig.CAHost
-	}
-
-	caAddr = fmt.Sprintf("%s:%s", caAddr, clientConfig.CAPort)
 
 	conn, err := grpc.NewClient(caAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -47,7 +33,36 @@ func main() {
 	}
 
 	defer conn.Close()
-	c := pb.NewCAClient(conn)
+	c := pb.NewPrismaCaClient(conn)
+
+	authReply, err := c.Authenticate(context.Background(), &pb.AuthRequest{
+		Username:    pb.StringValue(os.Args[2]),
+		Password:    pb.StringValue(os.Args[3]),
+		AuthpTicket: nil,
+	})
+
+	if err != nil {
+		fmt.Println("Error authenticating:", err)
+		panic(err)
+	}
+
+	if !authReply.Success {
+		fmt.Println("Authentication failed")
+		return
+	}
+
+	certReply, err := c.RequestCert(context.Background(), &pb.CertRequest{
+		RequestedValidity:             3600,
+		ExtendedValidityJustification: pb.StringValue("I need it"),
+		AuthToken:                     authReply.AuthToken,
+	})
+
+	if err != nil {
+		fmt.Println("Error requesting certificate:", err)
+		panic(err)
+	}
+
+	fmt.Println("Certificate received:", certReply)
 }
 
 func ResolveDnsToIp(dns string) (string, error) {
@@ -57,24 +72,4 @@ func ResolveDnsToIp(dns string) (string, error) {
 	}
 
 	return ips[0].String(), nil
-}
-
-func LoadClientConfigFromFile() (*ClientConfig, error) {
-	if _, err := os.Stat("config.json"); os.IsNotExist(err) {
-		return nil, err
-	}
-
-	file, err := os.Open("config.json")
-	if err != nil {
-		return nil, err
-	}
-
-	decoder := json.NewDecoder(file)
-	config := &ClientConfig{}
-	err = decoder.Decode(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return config, nil
 }

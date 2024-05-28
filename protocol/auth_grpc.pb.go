@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.12.4
-// source: auth.proto
+// source: protocol/auth.proto
 
 package protocol
 
@@ -18,124 +18,160 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// CAClientClient is the client API for CAClient service.
+// PrismaCaClient is the client API for PrismaCa service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type CAClientClient interface {
+type PrismaCaClient interface {
+	GetConfig(ctx context.Context, in *ConfigRequest, opts ...grpc.CallOption) (*ConfigReply, error)
 	Authenticate(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthReply, error)
 	RequestCert(ctx context.Context, in *CertRequest, opts ...grpc.CallOption) (*CertReply, error)
 }
 
-type cAClientClient struct {
+type prismaCaClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewCAClientClient(cc grpc.ClientConnInterface) CAClientClient {
-	return &cAClientClient{cc}
+func NewPrismaCaClient(cc grpc.ClientConnInterface) PrismaCaClient {
+	return &prismaCaClient{cc}
 }
 
-func (c *cAClientClient) Authenticate(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthReply, error) {
+func (c *prismaCaClient) GetConfig(ctx context.Context, in *ConfigRequest, opts ...grpc.CallOption) (*ConfigReply, error) {
+	out := new(ConfigReply)
+	err := c.cc.Invoke(ctx, "/PrismaCa/GetConfig", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *prismaCaClient) Authenticate(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthReply, error) {
 	out := new(AuthReply)
-	err := c.cc.Invoke(ctx, "/client.CAClient/Authenticate", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/PrismaCa/Authenticate", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *cAClientClient) RequestCert(ctx context.Context, in *CertRequest, opts ...grpc.CallOption) (*CertReply, error) {
+func (c *prismaCaClient) RequestCert(ctx context.Context, in *CertRequest, opts ...grpc.CallOption) (*CertReply, error) {
 	out := new(CertReply)
-	err := c.cc.Invoke(ctx, "/client.CAClient/RequestCert", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/PrismaCa/RequestCert", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// CAClientServer is the server API for CAClient service.
-// All implementations must embed UnimplementedCAClientServer
+// PrismaCaServer is the server API for PrismaCa service.
+// All implementations must embed UnimplementedPrismaCaServer
 // for forward compatibility
-type CAClientServer interface {
+type PrismaCaServer interface {
+	GetConfig(context.Context, *ConfigRequest) (*ConfigReply, error)
 	Authenticate(context.Context, *AuthRequest) (*AuthReply, error)
 	RequestCert(context.Context, *CertRequest) (*CertReply, error)
-	mustEmbedUnimplementedCAClientServer()
+	mustEmbedUnimplementedPrismaCaServer()
 }
 
-// UnimplementedCAClientServer must be embedded to have forward compatible implementations.
-type UnimplementedCAClientServer struct {
+// UnimplementedPrismaCaServer must be embedded to have forward compatible implementations.
+type UnimplementedPrismaCaServer struct {
 }
 
-func (UnimplementedCAClientServer) Authenticate(context.Context, *AuthRequest) (*AuthReply, error) {
+func (UnimplementedPrismaCaServer) GetConfig(context.Context, *ConfigRequest) (*ConfigReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetConfig not implemented")
+}
+func (UnimplementedPrismaCaServer) Authenticate(context.Context, *AuthRequest) (*AuthReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Authenticate not implemented")
 }
-func (UnimplementedCAClientServer) RequestCert(context.Context, *CertRequest) (*CertReply, error) {
+func (UnimplementedPrismaCaServer) RequestCert(context.Context, *CertRequest) (*CertReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestCert not implemented")
 }
-func (UnimplementedCAClientServer) mustEmbedUnimplementedCAClientServer() {}
+func (UnimplementedPrismaCaServer) mustEmbedUnimplementedPrismaCaServer() {}
 
-// UnsafeCAClientServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to CAClientServer will
+// UnsafePrismaCaServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to PrismaCaServer will
 // result in compilation errors.
-type UnsafeCAClientServer interface {
-	mustEmbedUnimplementedCAClientServer()
+type UnsafePrismaCaServer interface {
+	mustEmbedUnimplementedPrismaCaServer()
 }
 
-func RegisterCAClientServer(s grpc.ServiceRegistrar, srv CAClientServer) {
-	s.RegisterService(&CAClient_ServiceDesc, srv)
+func RegisterPrismaCaServer(s grpc.ServiceRegistrar, srv PrismaCaServer) {
+	s.RegisterService(&PrismaCa_ServiceDesc, srv)
 }
 
-func _CAClient_Authenticate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _PrismaCa_GetConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PrismaCaServer).GetConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/PrismaCa/GetConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PrismaCaServer).GetConfig(ctx, req.(*ConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PrismaCa_Authenticate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AuthRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CAClientServer).Authenticate(ctx, in)
+		return srv.(PrismaCaServer).Authenticate(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/client.CAClient/Authenticate",
+		FullMethod: "/PrismaCa/Authenticate",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CAClientServer).Authenticate(ctx, req.(*AuthRequest))
+		return srv.(PrismaCaServer).Authenticate(ctx, req.(*AuthRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CAClient_RequestCert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _PrismaCa_RequestCert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CertRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CAClientServer).RequestCert(ctx, in)
+		return srv.(PrismaCaServer).RequestCert(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/client.CAClient/RequestCert",
+		FullMethod: "/PrismaCa/RequestCert",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CAClientServer).RequestCert(ctx, req.(*CertRequest))
+		return srv.(PrismaCaServer).RequestCert(ctx, req.(*CertRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// CAClient_ServiceDesc is the grpc.ServiceDesc for CAClient service.
+// PrismaCa_ServiceDesc is the grpc.ServiceDesc for PrismaCa service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var CAClient_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "client.CAClient",
-	HandlerType: (*CAClientServer)(nil),
+var PrismaCa_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "PrismaCa",
+	HandlerType: (*PrismaCaServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "GetConfig",
+			Handler:    _PrismaCa_GetConfig_Handler,
+		},
+		{
 			MethodName: "Authenticate",
-			Handler:    _CAClient_Authenticate_Handler,
+			Handler:    _PrismaCa_Authenticate_Handler,
 		},
 		{
 			MethodName: "RequestCert",
-			Handler:    _CAClient_RequestCert_Handler,
+			Handler:    _PrismaCa_RequestCert_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "auth.proto",
+	Metadata: "protocol/auth.proto",
 }

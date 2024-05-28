@@ -3,10 +3,9 @@ package jsonprovider
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 
-	"github.com/stateprism/prism_ca/config"
+	"github.com/stateprism/prisma_ca/providers"
 )
 
 type JsonConfigProvider struct {
@@ -56,7 +55,7 @@ func (p *JsonConfigProvider) String() string {
 func (p *JsonConfigProvider) Get(key string) (interface{}, error) {
 	val, ok := p.keys[key]
 	if !ok {
-		return "", config.NewConfigError(config.CONFIG_ERROR_INVALID_KEY, p)
+		return "", providers.CONFIG_ERROR_INVALID_KEY
 	}
 	return val, nil
 }
@@ -68,7 +67,7 @@ func (p *JsonConfigProvider) GetString(key string) (string, error) {
 	}
 	valStr, ok := val.(string)
 	if !ok {
-		return "", errors.New(fmt.Sprintf("%s value is not a string", key))
+		return "", providers.CONFIG_ERROR_INVALID_VALUE
 	}
 	return valStr, nil
 }
@@ -80,9 +79,33 @@ func (p *JsonConfigProvider) GetInt(key string) (int, error) {
 	}
 	valInt, ok := val.(int)
 	if !ok {
-		return 0, errors.New(fmt.Sprintf("%s value is not a string", key))
+		return 0, providers.CONFIG_ERROR_INVALID_VALUE
 	}
 	return valInt, nil
+}
+
+func (p *JsonConfigProvider) GetBytes(key string) ([]byte, error) {
+	val, err := p.Get(key)
+	if err != nil {
+		return nil, nil
+	}
+	valBytes, ok := val.([]byte)
+	if !ok {
+		return nil, providers.CONFIG_ERROR_INVALID_VALUE
+	}
+	return valBytes, nil
+}
+
+func (p *JsonConfigProvider) GetBool(key string) (bool, error) {
+	val, err := p.Get(key)
+	if err != nil {
+		return false, nil
+	}
+	valBool, ok := val.(bool)
+	if !ok {
+		return false, providers.CONFIG_ERROR_INVALID_VALUE
+	}
+	return valBool, nil
 }
 
 func (p *JsonConfigProvider) Set(key string, value interface{}) error {
