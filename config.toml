@@ -1,0 +1,13 @@
+[ca_server]
+ca_host = "localhost:5000"
+hmac_key = "ZjBoW1OfD11lOhNvYZlEmw"
+auth_provider = "pam"
+server_id = "test_server"
+certificate_store = "./certstore"
+allowed_key_types = [ "ecdsa", "ed25519" ]
+
+[admin_server]
+admin_host = "localhost:8000"
+admin_keys = [
+  {user = "test_admin", key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAhOhkaucaaXC18WrhZUti7mZP4466MqPjXSDukCUBPk Development usage admin key"}
+]

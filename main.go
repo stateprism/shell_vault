@@ -6,10 +6,10 @@ import (
 	"net"
 	"os"
 
-	"github.com/stateprism/prisma_ca/jsonprovider"
 	pb "github.com/stateprism/prisma_ca/protocol"
 	"github.com/stateprism/prisma_ca/providers"
 	"github.com/stateprism/prisma_ca/server"
+	jsonprovider "github.com/stateprism/prisma_ca/tomlprovider"
 	"github.com/stateprism/prisma_ca/zaploggerprovider"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

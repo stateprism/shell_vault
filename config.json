@@ -3,8 +3,13 @@
 	"hmac_key": "ZjBoW1OfD11lOhNvYZlEmw",
 	"auth_provider": "pam",
 	"server_id": "test_server",
+	"certificate_store": "./certstore",
 	"allowed_key_types": [
 		"ecdsa",
 		"ed25519"
+	],
+	"admin_host": "localhost:8000",
+	"allowed_admin_keys": [
+		"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAhOhkaucaaXC18WrhZUti7mZP4466MqPjXSDukCUBPk Development usage admin key"
 	]
 }

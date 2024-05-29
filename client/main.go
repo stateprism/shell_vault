@@ -6,8 +6,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/stateprism/prisma_ca/jsonprovider"
 	pb "github.com/stateprism/prisma_ca/protocol"
+	jsonprovider "github.com/stateprism/prisma_ca/tomlprovider"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
