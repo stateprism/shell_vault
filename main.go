@@ -3,7 +3,6 @@ package main
 import (
 	_ "embed"
 	"fmt"
-	"log"
 	"net"
 	"os"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/stateprism/prisma_ca/zaploggerprovider"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 // Embed the banner text
@@ -22,16 +22,23 @@ import (
 var banner string
 
 func Run() error {
-	var zapLogger *zap.Logger
 	var logger providers.LogProvider
 	envProvider := providers.NewEnvProvider("PRISMA_CA_")
-	if envProvider.IsEnvEqual("ENV", "DEV") {
-		zapLogger, _ = zap.NewDevelopment()
-		logger = zaploggerprovider.NewZapLoggerProvider(nil, zapLogger.Sugar())
-	} else if envProvider.IsEnvEqual("ENV", "PROD") {
-		zapLogger, _ := zap.NewProduction()
+	if envProvider.IsEnvEqual("ENV", "PROD") {
+		zapLogger, err := zap.NewProduction()
+		if err != nil {
+			return err
+		}
 		logger = zaploggerprovider.NewZapLoggerProvider(zapLogger, nil)
+	} else {
+		zapLogger, err := zap.NewDevelopment()
+		if err != nil {
+			return err
+		}
+		logger = zaploggerprovider.NewZapLoggerProvider(nil, zapLogger.Sugar())
 	}
+
+	envMode := envProvider.GetEnvOrDefault("ENV", "DEV")
 
 	defer logger.Flush()
 
@@ -54,7 +61,11 @@ func Run() error {
 	}
 
 	srv := grpc.NewServer()
-	pb.RegisterPrismaCaServer(srv, server.NewCAServer(provider, envProvider, logger))
+	if envMode == "DEV" {
+		reflection.Register(srv)
+	}
+
+	pb.RegisterPrismaCaServer(srv, server.NewCAServer(provider, envProvider, logger, envMode))
 	srv.Serve(listen)
 	return nil
 }
@@ -64,6 +75,6 @@ func main() {
 
 	fmt.Println("Starting CA server")
 	if err := Run(); err != nil {
-		log.Fatalf("Error starting CA server: %v", err)
+		fmt.Println(err)
 	}
 }

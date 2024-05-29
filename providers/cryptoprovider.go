@@ -3,6 +3,7 @@ package providers
 import (
 	"crypto"
 	"slices"
+	"strings"
 
 	"github.com/stateprism/prisma_ca/lib"
 )
@@ -42,6 +43,7 @@ func KTFromString(s string) KeyType {
 func KTStringArrayToKTArray(kt []string) ([]KeyType, bool, int) {
 	ret := make([]KeyType, 0)
 	for i, k := range kt {
+		k = strings.ToUpper(k)
 		// if just 'ECDSA' is specified, add all ECDSA types
 		if k == "ECDSA" {
 			ret = append(ret, PRIVATEKEY_TYPE_ECDSA_256, PRIVATEKEY_TYPE_ECDSA_384, PRIVATEKEY_TYPE_ECDSA_521)
@@ -54,6 +56,14 @@ func KTStringArrayToKTArray(kt []string) ([]KeyType, bool, int) {
 		}
 	}
 	return ret, true, -1
+}
+
+func KTArrayToKTStringArray(kt []KeyType) []string {
+	ret := make([]string, 0)
+	for _, k := range kt {
+		ret = append(ret, k.String())
+	}
+	return ret
 }
 
 type CryptoError int

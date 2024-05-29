@@ -20,7 +20,11 @@ func NewZapLoggerProvider(logger *zap.Logger, sugared *zap.SugaredLogger) *zapLo
 }
 
 func (z *zapLoggerProvider) Flush() {
-	z.logger.Sync()
+	if z.logger != nil {
+		z.logger.Sync()
+	} else if z.sugar != nil {
+		z.sugar.Sync()
+	}
 }
 
 func (z *zapLoggerProvider) Log(level providers.LogLevel, message string) {

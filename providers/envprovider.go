@@ -34,6 +34,14 @@ func (p *EnvProvider) GetEnv(key string) (*string, bool) {
 	return &val, ok
 }
 
+func (p *EnvProvider) GetEnvOrDefault(key, def string) string {
+	val, ok := p.env[p.prefix+key]
+	if !ok {
+		return def
+	}
+	return val
+}
+
 func (p *EnvProvider) IsEnvEqual(key, value string) bool {
 	val, ok := p.env[p.prefix+key]
 	if !ok {

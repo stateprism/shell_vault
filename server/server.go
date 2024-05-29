@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/stateprism/prisma_ca/lib"
 	"github.com/stateprism/prisma_ca/pamprovider"
 	pb "github.com/stateprism/prisma_ca/protocol"
 	"github.com/stateprism/prisma_ca/providers"
@@ -15,15 +16,17 @@ import (
 
 type caServer struct {
 	pb.UnsafePrismaCaServer
-	Logger  providers.LogProvider
-	Config  providers.ConfigurationProvider
-	Auth    providers.AuthProvider
-	DB      providers.DatabaseProvider
-	Env     *providers.EnvProvider
-	HmacKey []byte
+	Logger          providers.LogProvider
+	Config          providers.ConfigurationProvider
+	Auth            providers.AuthProvider
+	DB              providers.DatabaseProvider
+	Crypto          providers.CryptoProvider
+	AllowedKeyTypes []providers.KeyType
+	Env             *providers.EnvProvider
+	HmacKey         []byte
 }
 
-func NewCAServer(configProvider providers.ConfigurationProvider, envProvider *providers.EnvProvider, log providers.LogProvider) pb.PrismaCaServer {
+func NewCAServer(configProvider providers.ConfigurationProvider, envProvider *providers.EnvProvider, log providers.LogProvider, envmode string) pb.PrismaCaServer {
 	server := new(caServer)
 	server.Config = configProvider
 	server.Logger = log
@@ -48,6 +51,19 @@ func NewCAServer(configProvider providers.ConfigurationProvider, envProvider *pr
 	server.Logger.Logf(providers.LOG_LEVEL_INFO, "Using auth provider: %s", server.Auth.String())
 
 	server.HmacKey = []byte(key)
+	kt, err := configProvider.Get("allowed_key_types")
+	if err != nil {
+		server.Logger.Fatalf("Error reading allowed key types: %v", err)
+	}
+	kta, ok := kt.([]interface{})
+	if !ok {
+		server.Logger.Fatalf("Allowed key types are invalid: %v", err)
+	}
+	akt, ok, idx := providers.KTStringArrayToKTArray(lib.InterfaceArrayToArray[string](kta))
+	if !ok {
+		server.Logger.Fatalf("Allowed key types are invalid: %v", idx)
+	}
+	server.AllowedKeyTypes = akt
 	return server
 }
 
@@ -105,10 +121,18 @@ func (s *caServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.Ce
 }
 
 func (s *caServer) GetConfig(context.Context, *pb.ConfigRequest) (*pb.ConfigReply, error) {
-	serverId, err := s.Config.GetString("server_id")
-	if err != nil {
-		return nil, err
+	serverId, _ := s.Config.GetString("server_id")
+	if serverId == "" {
+		serverId = "prisma-ca"
 	}
+	policy := pb.NewEmptyExtensions()
+	policy.SetExtensionsRoot()
+	ktArr := lib.ArrayToInterfaceArray(providers.KTArrayToKTStringArray(s.AllowedKeyTypes))
+	policyData, err := pb.MakeNewExtension(ktArr)
+	if err != nil {
+		s.Logger.Fatalf("Error creating policy extension: %v", err)
+	}
+	policy.Set("allowed_key_types", policyData)
 	return &pb.ConfigReply{
 		ServerProtocolVersion: &pb.Version{
 			Major: 1,
@@ -117,5 +141,6 @@ func (s *caServer) GetConfig(context.Context, *pb.ConfigRequest) (*pb.ConfigRepl
 		},
 		ReplyTime: uint64(time.Now().Unix()),
 		ServerId:  serverId,
+		Policy:    policy,
 	}, nil
 }
