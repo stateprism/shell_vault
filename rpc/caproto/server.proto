@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+import "caproto/extensions.proto";
+import "caproto/version.proto";
+
+option go_package = "github.com/stateprism/prisma_ca/rpc/caproto";
+
+service PrismaCa {
+  rpc GetConfig(ConfigRequest) returns (ConfigReply) {}
+  rpc Authenticate(AuthRequest) returns (AuthReply) {}
+  rpc RequestCert(CertRequest) returns (CertReply) {}
+}
+
+message Errors { map<string, string> errors = 1; }
+
+message ConfigRequest {
+  Version client_version = 1;
+  // The version of the client understood protocol
+  Version client_protocol_version = 2;
+}
+
+message ConfigReply {
+  // The version of the server understood protocol
+  Version server_protocol_version = 1;
+
+  // The time at which the server replied
+  uint64 replyTime = 2;
+  string server_id = 3;
+  // The server's certification policy
+  // and the allowed extensions
+  Extensions policy = 4;
+}
+
+message AuthRequest {
+  // A provider-specific authentication request
+  // for example for pam, it looks like "username\0password"
+  bytes auth_request = 1;
+}
+
+message AuthReply {
+  // The time at which the authentication was performed
+  fixed64 authTime = 1;
+  // The time at which the authentication expires, or 0 if failure
+  fixed64 authUntil = 2;
+  // The authentication token to be used for further requests
+  string authToken = 3;
+  // Whether the authentication was successful
+  bool success = 4;
+  // Any errors that occurred during authentication
+  Errors errors = 5;
+}
+
+message CertRequest {
+  string authToken = 1;
+  fixed64 requestedValidity = 2;
+  bytes public_key = 3;
+  optional string extendedValidityJustification = 4;
+}
+
+message CertReply {
+  bytes cert = 1;
+  fixed64 validUntil = 2;
+}

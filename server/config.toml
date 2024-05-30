@@ -1,0 +1,11 @@
+[ca_server]
+listen = "localhost:5000"
+hmac_key = "ZjBoW1OfD11lOhNvYZlEmw"
+auth_provider = "builtin://pam"
+server_id = "test_server"
+certificate_store = "./certstore"
+allowed_key_types = [ "ecdsa", "ed25519" ]
+
+[admin_server]
+listen = "localhost:8000"
+root_key = "AAAAC3NzaC1lZDI1NTE5AAAAIAhOhkaucaaXC18WrhZUti7mZP4466MqPjXSDukCUBPk"

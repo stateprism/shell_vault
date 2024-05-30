@@ -1,3 +1,0 @@
-Prisma SSH CA
-
-Copyright (c) 2024 State Prism, All rights reserved
