@@ -1,4 +1,4 @@
-package protocol
+package caproto
 
 import "fmt"
 

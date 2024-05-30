@@ -3,7 +3,7 @@ package providers
 import (
 	"context"
 
-	pb "github.com/stateprism/prisma_ca/server/protocol"
+	pb "github.com/stateprism/prisma_ca/rpc/caproto"
 )
 
 type AuthProvider interface {

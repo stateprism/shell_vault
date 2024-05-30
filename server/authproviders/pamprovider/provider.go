@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	"github.com/msteinert/pam"
+	pb "github.com/stateprism/prisma_ca/rpc/caproto"
 	"github.com/stateprism/prisma_ca/server/authproviders"
-	pb "github.com/stateprism/prisma_ca/server/protocol"
 )
 
 type pamProvider struct{}

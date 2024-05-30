@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	"github.com/spf13/afero"
+	pb "github.com/stateprism/prisma_ca/rpc/caproto"
 	"github.com/stateprism/prisma_ca/server/authproviders"
-	pb "github.com/stateprism/prisma_ca/server/protocol"
 )
 
 type SyncMap struct {

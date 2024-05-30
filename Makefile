@@ -1,14 +1,17 @@
 # Default target
 all: build
 
-build: proto
-	go build -o bin/ ./...
+build: server client
+
+server: proto
+	$(MAKE) -C server
+
+client: proto
+	$(MAKE) -C client
 
 proto:
 	$(MAKE) -C rpc
 
-serve: build
-	bin/prisma_ca config.json
 
 clean:
 	rm -rf bin/

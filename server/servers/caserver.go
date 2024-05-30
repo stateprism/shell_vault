@@ -5,12 +5,11 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"time"
 
+	pb "github.com/stateprism/prisma_ca/rpc/caproto"
 	"github.com/stateprism/prisma_ca/server/lib"
-	pb "github.com/stateprism/prisma_ca/server/protocol"
 	"github.com/stateprism/prisma_ca/server/providers"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -102,7 +101,7 @@ func (s *CaServer) Authenticate(ctx context.Context, msg *pb.AuthRequest) (*pb.A
 	}
 }
 
-func generateToken(username string, b []byte) string {
+func generateToken(username string, b []byte) []byte {
 	var token []byte
 
 	time := time.Now().Unix()
@@ -113,7 +112,7 @@ func generateToken(username string, b []byte) string {
 	hmac := hmac.New(sha256.New, b)
 	hmac.Write(token)
 	bytes := hmac.Sum(nil)
-	return hex.EncodeToString(bytes)
+	return bytes
 }
 
 func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.CertReply, error) {

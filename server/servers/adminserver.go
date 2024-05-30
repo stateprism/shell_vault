@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	pb "github.com/stateprism/prisma_ca/rpc/adminprotocol"
+	pb "github.com/stateprism/prisma_ca/rpc/adminproto"
 	"github.com/stateprism/prisma_ca/server/providers"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
