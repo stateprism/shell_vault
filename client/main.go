@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"os"
 
 	"github.com/stateprism/prisma_ca/client/clientutils"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/term"
 )
 
 func main() {
@@ -36,21 +36,12 @@ func main() {
 					}
 					defer client.Close()
 
-					fmt.Println("Enter your username: ")
-					username, err := term.ReadPassword(0)
-					if err != nil {
-						return err
-					}
-					fmt.Println("Enter your password: ")
-					password, err := term.ReadPassword(0)
+					err = client.Authenticate("test", "test")
 					if err != nil {
 						return err
 					}
 
-					err = client.Authenticate(string(username), string(password))
-					if err != nil {
-						return err
-					}
+					fmt.Println(hex.EncodeToString(client.GetToken()))
 
 					return nil
 				},

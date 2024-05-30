@@ -25,6 +25,7 @@ func NewClientConnection(ctx context.Context) *ClientConnection {
 		token:           nil,
 		client:          nil,
 		isAuthenticated: false,
+		ctx:             ctx,
 	}
 }
 
@@ -78,4 +79,8 @@ func (cc *ClientConnection) Authenticate(user string, pass string) error {
 
 	cc.token = resp.GetAuthToken()
 	return nil
+}
+
+func (cc *ClientConnection) GetToken() []byte {
+	return cc.token
 }

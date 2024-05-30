@@ -42,7 +42,7 @@ type PlainFileProvider struct {
 }
 
 type pfp struct {
-	Entries map[string]string
+	Entries map[string]string `json:"entries"`
 }
 
 func New(fs afero.Fs, filename string) (*PlainFileProvider, error) {
