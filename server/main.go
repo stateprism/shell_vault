@@ -4,9 +4,14 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"github.com/stateprism/libprisma/memkv"
+	"github.com/stateprism/prisma_ca/server/authproviders/pamprovider"
+	"github.com/stateprism/prisma_ca/server/authproviders/plainfileprovider"
+	"github.com/stateprism/prisma_ca/server/localkeychain"
 	"net"
 	"os"
-	"strings"
+	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/afero"
@@ -32,9 +37,10 @@ type BootStrapResult struct {
 	fx.Out
 	Config providers.ConfigurationProvider
 	Auth   providers.AuthProvider
-	Loger  *zap.Logger
+	Logger *zap.Logger
 	Env    *providers.EnvProvider
 	REnv   RunEnv
+	MemKV  *memkv.MemKV
 }
 
 type GrpcServerParams struct {
@@ -47,20 +53,15 @@ type GrpcServerParams struct {
 	REnv        RunEnv
 }
 
-func NewConfig(configStr string) (providers.ConfigurationProvider, error) {
-	configPath := configStr
+func NewConfig(configPath string) (providers.ConfigurationProvider, error) {
 	var config providers.ConfigurationProvider
-	if strings.HasPrefix(configPath, "file://") {
-		fs := afero.NewOsFs()
-		configPath = strings.TrimPrefix(configPath, "file://")
-		configTemp, err := tomlprovider.New(fs, configPath)
-		if err != nil {
-			return nil, err
-		}
-		config = configTemp
-	} else {
-		return nil, fmt.Errorf("invalid configuration source")
+	fs := afero.NewOsFs()
+	p, _ := filepath.Abs(path.Join(configPath, "config.toml"))
+	configTemp, err := tomlprovider.New(fs, p)
+	if err != nil {
+		return nil, fmt.Errorf("error setting up config provider with %s", configPath)
 	}
+	config = configTemp
 	return config, nil
 }
 
@@ -105,16 +106,38 @@ func GrpcListen(p GrpcServerParams) []*grpc.Server {
 	return s
 }
 
-func Bootstrap() BootStrapResult {
+func NewAuthProvider(config providers.ConfigurationProvider, configPath string) (providers.AuthProvider, error) {
+	providerName, err := config.GetString("providers.auth_provider.mode")
+	if err != nil {
+		return nil, err
+	}
+	switch providerName {
+	case "pam":
+		return pamprovider.New(), nil
+	case "local_file":
+		fs := afero.NewOsFs()
+		providerFile, err := config.GetString("providers.auth_provider.file")
+		if err != nil || providerFile == "" {
+			return nil, err
+		}
+		p, _ := filepath.Abs(configPath)
+		provider, err := plainfileprovider.New(fs, path.Join(p, providerFile))
+		return provider, err
+	default:
+		return nil, fmt.Errorf("unknown auth provider")
+	}
+}
+
+func Bootstrap() (BootStrapResult, error) {
 	configParams := BootStrapResult{}
 	app := &cli.App{
 		Name:  "prisma_ca",
 		Usage: "Prisma Certificate Authority",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
+			&cli.PathFlag{
 				Name:     "config",
 				Required: true,
-				Usage:    "Path to the configuration file",
+				Usage:    "Path to the configuration dir",
 				Aliases:  []string{"c"},
 			},
 		},
@@ -125,7 +148,7 @@ func Bootstrap() BootStrapResult {
 				return err
 			}
 			envProvider := providers.NewEnvProvider("PRISMA_CA_")
-			authProvider, err := providers.NewAuthProvider(configProvider)
+			authProvider, err := NewAuthProvider(configProvider, configPath)
 			if err != nil {
 				return err
 			}
@@ -142,12 +165,17 @@ func Bootstrap() BootStrapResult {
 				logger = l
 			}
 
+			if err != nil {
+				return err
+			}
+
 			configParams = BootStrapResult{
 				Config: configProvider,
 				Env:    envProvider,
-				Loger:  logger,
+				Logger: logger,
 				REnv:   rEnv,
 				Auth:   authProvider,
+				MemKV:  memkv.NewMemKV(".", &memkv.Opts{CaseInsensitive: true}),
 			}
 
 			return nil
@@ -157,9 +185,10 @@ func Bootstrap() BootStrapResult {
 	err := app.Run(os.Args)
 	if err != nil {
 		fmt.Println(err)
+		return BootStrapResult{}, err
 	}
 
-	return configParams
+	return configParams, nil
 }
 
 func main() {
@@ -173,8 +202,10 @@ func main() {
 			Bootstrap,
 			servers.NewCAServer,
 			servers.NewAdminServer,
+			localkeychain.NewLocalKeychain,
 			GrpcListen,
 		),
+		fx.Invoke(func(providers.KeychainProvider) {}),
 		fx.Invoke(func([]*grpc.Server) {}),
 	).Run()
 }

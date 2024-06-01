@@ -3,11 +3,16 @@ package servers
 import (
 	"context"
 	"crypto/hmac"
+	cryptorand "crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"golang.org/x/crypto/ssh"
+	"math/rand/v2"
+	"slices"
 	"time"
 
+	"github.com/stateprism/libprisma/memkv"
 	pb "github.com/stateprism/prisma_ca/rpc/caproto"
 	"github.com/stateprism/prisma_ca/server/lib"
 	"github.com/stateprism/prisma_ca/server/providers"
@@ -21,26 +26,33 @@ type CaServer struct {
 	Config    providers.ConfigurationProvider
 	Auth      providers.AuthProvider
 	DB        providers.DatabaseProvider
-	Crypto    providers.CryptoProvider
+	KProvider providers.KeychainProvider
 	AllowedKT []providers.KeyType
 	Env       *providers.EnvProvider
 	Log       *zap.Logger
 	Listen    string
+	MemKV     *memkv.MemKV
+	root_ttl  int64
+	root_kt   providers.KeyType
 }
 
 type CaServerParams struct {
 	fx.In
-	Logger *zap.Logger
-	Config providers.ConfigurationProvider
-	Auth   providers.AuthProvider
-	Env    *providers.EnvProvider
+	Logger    *zap.Logger
+	Config    providers.ConfigurationProvider
+	Auth      providers.AuthProvider
+	Env       *providers.EnvProvider
+	KProvider providers.KeychainProvider
+	MemKV     *memkv.MemKV
 }
 
 func NewCAServer(p CaServerParams) (*CaServer, error) {
 	s := &CaServer{
-		Config: p.Config,
-		Auth:   p.Auth,
-		Log:    p.Logger,
+		Config:    p.Config,
+		Auth:      p.Auth,
+		Log:       p.Logger,
+		KProvider: p.KProvider,
+		MemKV:     p.MemKV,
 	}
 	if s.Config == nil {
 		return nil, fmt.Errorf("config is nil")
@@ -58,6 +70,17 @@ func NewCAServer(p CaServerParams) (*CaServer, error) {
 
 	if s.Auth == nil {
 		return nil, fmt.Errorf("auth is nil")
+	}
+	// TODO: Handle these possible errors
+	rKts, _ := s.Config.GetString("ca_server.root_key_type")
+	rktTtl, _ := s.Config.GetInt64("ca_server.root_key_max_ttl")
+	s.root_kt = providers.KTFromString(rKts)
+	s.root_ttl = rktTtl
+
+	s.KProvider.SetExpKeyHook(s.expKeyHook)
+
+	if err := s.rotateRootKey(); err != nil {
+		return nil, err
 	}
 
 	return s, nil
@@ -116,9 +139,25 @@ func generateToken(username string, b []byte) []byte {
 }
 
 func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.CertReply, error) {
+	pko := s.KProvider.RetrieveActiveKey()
+	pkr := pko.UnwrapKey()
+	signer, err := ssh.NewSignerFromKey(pkr)
+
+	pubk, err := ssh.ParsePublicKey(msg.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	nonce := make([]byte, 32)
+	serial := rand.Uint64()
+	cryptorand.Read(nonce)
+	cert := ssh.Certificate{
+		Key:    pubk,
+		Nonce:  nonce,
+		Serial: serial,
+	}
+	_ = cert.SignCert(cryptorand.Reader, signer)
 	return &pb.CertReply{
-		Cert:       []byte("cert"),
-		ValidUntil: uint64(time.Now().Add(time.Hour).Unix()),
+		Cert: cert.Marshal(),
 	}, nil
 }
 
@@ -147,6 +186,21 @@ func (s *CaServer) GetConfig(context.Context, *pb.ConfigRequest) (*pb.ConfigRepl
 	}, nil
 }
 
-func (cs *CaServer) RegisterServer(s *grpc.Server) {
-	pb.RegisterPrismaCaServer(s, cs)
+func (s *CaServer) RegisterServer(srv *grpc.Server) {
+	pb.RegisterPrismaCaServer(srv, s)
+}
+
+func (s *CaServer) rotateRootKey() error {
+	id, err := s.KProvider.MakeNewKey(s.root_kt, s.root_ttl)
+	if err != nil {
+		return err
+	}
+	s.KProvider.SetActiveKey(id)
+	return nil
+}
+
+func (s *CaServer) expKeyHook(p providers.KeychainProvider, ids []providers.KeyIdentifier) {
+	if k, ok := p.GetActiveKey(); ok && slices.Contains(ids, k) {
+
+	}
 }

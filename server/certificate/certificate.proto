@@ -7,10 +7,11 @@ message CertificateMetadata {
   string serial = 2;
   string description = 3;
   uint64 created_at = 4;
-  optional uint64 expires_at = 5;
+  optional uint64 ttl = 5;
   bytes cert_uuid = 6;
   bool is_root = 7;
   bool is_intermediate = 8;
+  string username = 9;
 }
 
 message ServerPublicKeyMetadata { bytes parent_cert_id = 1; }

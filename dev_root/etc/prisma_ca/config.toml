@@ -1,0 +1,22 @@
+[ca_server]
+listen = "localhost:5000"
+hmac_key = "ZjBoW1OfD11lOhNvYZlEmw"
+server_id = "test_server"
+allowed_key_types = [ "ecdsa", "ed25519" ]
+# After this many seconds the server will automatically rotate the certs private key
+# and publish the new key
+root_key_type = "ed25519"
+root_key_max_ttl = 3600
+
+[providers.local_keychain_provider]
+path = "./certstore"
+fs = "memory"
+ttl_tick = 5
+
+[providers.auth_provider]
+mode = "local_file"
+file = "testusers.json"
+
+[admin_server]
+listen = "localhost:8000"
+root_key = "AAAAC3NzaC1lZDI1NTE5AAAAIAhOhkaucaaXC18WrhZUti7mZP4466MqPjXSDukCUBPk"

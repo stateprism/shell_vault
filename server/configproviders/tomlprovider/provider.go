@@ -112,6 +112,18 @@ func (p *TomlConfigProvider) GetInt(key string) (int, error) {
 	return valInt, nil
 }
 
+func (p *TomlConfigProvider) GetInt64(key string) (int64, error) {
+	val, err := p.Get(key)
+	if err != nil {
+		return 0, nil
+	}
+	valInt, ok := val.(int64)
+	if !ok {
+		return 0, providers.CONFIG_ERROR_INVALID_VALUE
+	}
+	return valInt, nil
+}
+
 func (p *TomlConfigProvider) GetBytes(key string) ([]byte, error) {
 	val, err := p.Get(key)
 	if err != nil {

@@ -30,6 +30,7 @@ type ConfigurationProvider interface {
 	IsWriteable() bool
 	GetString(key string) (string, error)
 	GetInt(key string) (int, error)
+	GetInt64(key string) (int64, error)
 	GetBytes(key string) ([]byte, error)
 	GetBool(key string) (bool, error)
 	Get(key string) (interface{}, error)

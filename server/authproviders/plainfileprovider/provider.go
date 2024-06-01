@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/stateprism/prisma_ca/server/providers"
 	"os"
 	"sync"
 
@@ -45,7 +46,7 @@ type pfp struct {
 	Entries map[string]string `json:"entries"`
 }
 
-func New(fs afero.Fs, filename string) (*PlainFileProvider, error) {
+func New(fs afero.Fs, filename string) (providers.AuthProvider, error) {
 	if fs == nil {
 		return nil, fmt.Errorf("fs is nil")
 	}
