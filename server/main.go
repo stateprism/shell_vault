@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/stateprism/libprisma/memkv"
 	"github.com/stateprism/prisma_ca/server/authproviders/pamprovider"
-	"github.com/stateprism/prisma_ca/server/authproviders/plainfileprovider"
 	"github.com/stateprism/prisma_ca/server/localkeychain"
 	"net"
 	"os"
@@ -106,23 +105,15 @@ func GrpcListen(p GrpcServerParams) []*grpc.Server {
 	return s
 }
 
-func NewAuthProvider(config providers.ConfigurationProvider, configPath string) (providers.AuthProvider, error) {
-	providerName, err := config.GetString("providers.auth_provider.mode")
+func NewAuthProvider(config providers.ConfigurationProvider, logger *zap.Logger, configPath string, kv *memkv.MemKV) (providers.AuthProvider, error) {
+	providerName, err := config.GetString("providers.auth_provider.realm")
 	if err != nil {
 		return nil, err
 	}
 	switch providerName {
 	case "pam":
-		return pamprovider.New(), nil
-	case "local_file":
-		fs := afero.NewOsFs()
-		providerFile, err := config.GetString("providers.auth_provider.file")
-		if err != nil || providerFile == "" {
-			return nil, err
-		}
-		p, _ := filepath.Abs(configPath)
-		provider, err := plainfileprovider.New(fs, path.Join(p, providerFile))
-		return provider, err
+		logger.Info("Setup authentication with PAM provider")
+		return pamprovider.New(config, kv), nil
 	default:
 		return nil, fmt.Errorf("unknown auth provider")
 	}
@@ -148,10 +139,7 @@ func Bootstrap() (BootStrapResult, error) {
 				return err
 			}
 			envProvider := providers.NewEnvProvider("PRISMA_CA_")
-			authProvider, err := NewAuthProvider(configProvider, configPath)
-			if err != nil {
-				return err
-			}
+			memkv := memkv.NewMemKV(".", &memkv.Opts{CaseInsensitive: true})
 
 			var logger *zap.Logger
 			var rEnv RunEnv
@@ -165,6 +153,7 @@ func Bootstrap() (BootStrapResult, error) {
 				logger = l
 			}
 
+			authProvider, err := NewAuthProvider(configProvider, logger, configPath, memkv)
 			if err != nil {
 				return err
 			}
@@ -175,7 +164,7 @@ func Bootstrap() (BootStrapResult, error) {
 				Logger: logger,
 				REnv:   rEnv,
 				Auth:   authProvider,
-				MemKV:  memkv.NewMemKV(".", &memkv.Opts{CaseInsensitive: true}),
+				MemKV:  memkv,
 			}
 
 			return nil

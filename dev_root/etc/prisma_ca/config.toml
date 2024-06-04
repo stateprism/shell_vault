@@ -7,15 +7,18 @@ allowed_key_types = [ "ecdsa", "ed25519" ]
 # and publish the new key
 root_key_type = "ed25519"
 root_key_max_ttl = 3600
+user_cert_ttl = 72000
 
 [providers.local_keychain_provider]
 path = "./certstore"
-fs = "memory"
-ttl_tick = 5
+fs = "local"
+ttl_tick = 60
 
 [providers.auth_provider]
-mode = "local_file"
-file = "testusers.json"
+realm="pam"
+
+[providers.auth_providers.pam]
+allowed_groups=["*"]
 
 [admin_server]
 listen = "localhost:8000"

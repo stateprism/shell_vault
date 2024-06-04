@@ -2,12 +2,11 @@ package servers
 
 import (
 	"context"
-	"crypto/hmac"
 	cryptorand "crypto/rand"
-	"crypto/sha256"
-	"encoding/binary"
 	"fmt"
 	"golang.org/x/crypto/ssh"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"math/rand/v2"
 	"slices"
 	"time"
@@ -23,17 +22,18 @@ import (
 
 type CaServer struct {
 	pb.UnsafePrismaCaServer
-	Config    providers.ConfigurationProvider
-	Auth      providers.AuthProvider
-	DB        providers.DatabaseProvider
-	KProvider providers.KeychainProvider
-	AllowedKT []providers.KeyType
-	Env       *providers.EnvProvider
-	Log       *zap.Logger
-	Listen    string
-	MemKV     *memkv.MemKV
-	root_ttl  int64
-	root_kt   providers.KeyType
+	Config      providers.ConfigurationProvider
+	Auth        providers.AuthProvider
+	DB          providers.DatabaseProvider
+	KProvider   providers.KeychainProvider
+	AllowedKT   []providers.KeyType
+	Env         *providers.EnvProvider
+	Log         *zap.Logger
+	Listen      string
+	MemKV       *memkv.MemKV
+	rootTtl     int64
+	rootKt      providers.KeyType
+	userCertTtl uint64
 }
 
 type CaServerParams struct {
@@ -74,8 +74,10 @@ func NewCAServer(p CaServerParams) (*CaServer, error) {
 	// TODO: Handle these possible errors
 	rKts, _ := s.Config.GetString("ca_server.root_key_type")
 	rktTtl, _ := s.Config.GetInt64("ca_server.root_key_max_ttl")
-	s.root_kt = providers.KTFromString(rKts)
-	s.root_ttl = rktTtl
+	userCertTtl, _ := s.Config.GetInt64("ca_server.user_cert_ttl")
+	s.rootKt = providers.KTFromString(rKts)
+	s.rootTtl = rktTtl
+	s.userCertTtl = uint64(userCertTtl)
 
 	s.KProvider.SetExpKeyHook(s.expKeyHook)
 
@@ -87,59 +89,21 @@ func NewCAServer(p CaServerParams) (*CaServer, error) {
 }
 
 func (s *CaServer) Authenticate(ctx context.Context, msg *pb.AuthRequest) (*pb.AuthReply, error) {
-	authTime := uint64(time.Now().Unix())
-	authUntil := uint64(time.Now().Add(time.Hour).Unix())
-	authSuccess, err := s.Auth.Authenticate(ctx, msg)
+
+	if msg.GetAuthRequest() == "" {
+		return nil, status.Error(codes.InvalidArgument, "field auth_request is empty, this is not allowed")
+	}
+
+	ent, err := s.Auth.Authenticate(ctx, msg.GetAuthRequest())
 	if err != nil {
-		s.Log.Error("Error authenticating", zap.Error(err))
-		return &pb.AuthReply{
-			Success:  false,
-			AuthTime: authTime,
-			Errors: &pb.Errors{
-				Errors: map[string]string{"AuthError": "Internal error"},
-			},
-		}, nil
+		return nil, err
 	}
-	if authSuccess {
-		secret, err := s.Config.GetBytes("ca_server.secret")
-		if err != nil {
-			s.Log.Error("Error getting secret", zap.Error(err))
-			return nil, fmt.Errorf("internal error")
-		}
-		token := generateToken(s.Auth.GetUserIdentifier(ctx, msg), secret)
-		return &pb.AuthReply{
-			AuthTime:  authTime,
-			AuthToken: token,
-			AuthUntil: authUntil,
-			Success:   true,
-		}, nil
-	} else {
-		return &pb.AuthReply{
-			Success:  false,
-			AuthTime: authTime,
-			Errors: &pb.Errors{
-				Errors: map[string]string{"AuthError": "Authentication failed"},
-			},
-		}, nil
-	}
-}
-
-func generateToken(username string, b []byte) []byte {
-	var token []byte
-
-	time := time.Now().Unix()
-	timeBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(timeBytes, uint64(time))
-	token = append(token, timeBytes...)
-	token = append(token, []byte(username)...)
-	hmac := hmac.New(sha256.New, b)
-	hmac.Write(token)
-	bytes := hmac.Sum(nil)
-	return bytes
+	_ = ent
+	return &pb.AuthReply{}, nil
 }
 
 func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.CertReply, error) {
-	pko := s.KProvider.RetrieveActiveKey()
+	pko, _ := s.KProvider.RetrieveKey("rootKey")
 	pkr := pko.UnwrapKey()
 	signer, err := ssh.NewSignerFromKey(pkr)
 
@@ -147,17 +111,17 @@ func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.Ce
 	if err != nil {
 		return nil, err
 	}
-	nonce := make([]byte, 32)
 	serial := rand.Uint64()
-	cryptorand.Read(nonce)
 	cert := ssh.Certificate{
-		Key:    pubk,
-		Nonce:  nonce,
-		Serial: serial,
+		Key:         pubk,
+		Serial:      serial,
+		ValidAfter:  uint64(time.Now().Add(1 * time.Second).Unix()),
+		ValidBefore: uint64(time.Now().Add(time.Duration(s.userCertTtl) * time.Second).Unix()),
+		CertType:    ssh.UserCert,
 	}
 	_ = cert.SignCert(cryptorand.Reader, signer)
 	return &pb.CertReply{
-		Cert: cert.Marshal(),
+		Cert: ssh.MarshalAuthorizedKey(&cert),
 	}, nil
 }
 
@@ -191,16 +155,18 @@ func (s *CaServer) RegisterServer(srv *grpc.Server) {
 }
 
 func (s *CaServer) rotateRootKey() error {
-	id, err := s.KProvider.MakeNewKey(s.root_kt, s.root_ttl)
+	_, err := s.KProvider.MakeAndReplaceKey("rootKey", s.rootKt, s.rootTtl)
 	if err != nil {
 		return err
 	}
-	s.KProvider.SetActiveKey(id)
 	return nil
 }
 
 func (s *CaServer) expKeyHook(p providers.KeychainProvider, ids []providers.KeyIdentifier) {
-	if k, ok := p.GetActiveKey(); ok && slices.Contains(ids, k) {
-
+	if slices.Contains(ids, "rootKey") {
+		err := s.rotateRootKey()
+		if err != nil {
+			panic("Failed to rotate root keys")
+		}
 	}
 }

@@ -8,27 +8,30 @@ import (
 	"crypto/elliptic"
 	cryptorand "crypto/rand"
 	"crypto/rsa"
+	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/spf13/afero"
+	"github.com/stateprism/libprisma/memkv"
 	"github.com/stateprism/prisma_ca/server/providers"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"sync"
+	"os"
+	"path/filepath"
 	"time"
 )
 
 // LocalKeychain must implement providers.KeychainProvider
 type LocalKeychain struct {
 	fs           afero.Fs
-	keychainKey  []byte
 	expHook      providers.ExpKeyHook
 	logger       *zap.Logger
-	store        *keyStore
+	store        *memkv.MemKV
 	activeKey    *providers.PrivateKey
 	ticker       *time.Ticker
 	tickInterval time.Duration
 	tickStop     chan struct{}
+	isLocal      bool
+	localPath    string
 }
 
 type LKParams struct {
@@ -36,6 +39,12 @@ type LKParams struct {
 	Lc     fx.Lifecycle
 	Config providers.ConfigurationProvider
 	Logger *zap.Logger
+}
+
+type onDiskKey struct {
+	Name string
+	Ttl  uint64
+	Key  crypto.PrivateKey
 }
 
 func NewLocalKeychain(par LKParams) (providers.KeychainProvider, error) {
@@ -52,6 +61,11 @@ func NewLocalKeychain(par LKParams) (providers.KeychainProvider, error) {
 	switch kcFsType {
 	case "local", "":
 		fs = afero.NewOsFs()
+		err := os.Chdir(par.Config.GetLocalStore())
+		if err != nil {
+			return nil, err
+		}
+		kcPath, err = filepath.Abs(kcPath)
 	case "memory":
 		fs = afero.NewMemMapFs()
 		_ = fs.MkdirAll(kcPath, 0700)
@@ -59,33 +73,30 @@ func NewLocalKeychain(par LKParams) (providers.KeychainProvider, error) {
 		return nil, fmt.Errorf("unknown fs type: %s for provider", kcFsType)
 	}
 
-	stat, err := fs.Stat(kcPath)
 	if err != nil {
+		return nil, err
+	}
+
+	stat, err := fs.Stat(kcPath)
+	if os.IsNotExist(err) {
+		errDir := fs.MkdirAll(kcPath, 0755)
+		if errDir != nil {
+			return nil, err
+		}
+	} else if err != nil {
 		return nil, err
 	}
 
 	if !stat.IsDir() {
-		return nil, fmt.Errorf("path %s is a file, this provider rquires a directory", kcPath)
+		return nil, fmt.Errorf("path %s is a file, this provider requires a directory", kcPath)
 	}
 
-	if _, err := fs.Stat(".keychainlock"); err == nil {
-		return nil, fmt.Errorf("lockfile exists on the given directory")
-	}
-
-	_, err = fs.Create(".keychainlock")
-	if err != nil {
-		return nil, err
-	}
-
-	store := &keyStore{
-		&sync.Map{},
-	}
+	store := memkv.NewMemKV("/", &memkv.Opts{CaseInsensitive: true})
 
 	lk := &LocalKeychain{
-		fs:          fs,
-		store:       store,
-		keychainKey: nil,
-		logger:      par.Logger,
+		fs:     fs,
+		store:  store,
+		logger: par.Logger,
 	}
 
 	// Start the ttl ticker, we check for expired every minute
@@ -180,8 +191,14 @@ func makeRsaKey(kt providers.KeyType) (rsa.PrivateKey, error) {
 	return *t, nil
 }
 
-func (l *LocalKeychain) MakeNewKey(kt providers.KeyType, ttl int64) (providers.KeyIdentifier, error) {
-	id := uuid.New()
+func (l *LocalKeychain) MakeNewKey(keyName providers.KeyIdentifier, kt providers.KeyType, ttl int64) (providers.KeyIdentifier, error) {
+	if _, ok := keyName.(string); !ok || keyName == nil {
+		return nil, errors.New("this provider only takes string key names")
+	}
+	// allow to rotate the rootKey if needed, but
+	if l.store.Contains(keyName.(string)) {
+		return nil, errors.New("this key name is already contained in this keyring")
+	}
 	var key crypto.PrivateKey
 	var err error
 	switch kt {
@@ -200,19 +217,19 @@ func (l *LocalKeychain) MakeNewKey(kt providers.KeyType, ttl int64) (providers.K
 		return nil, err
 	}
 
-	pk := providers.NewPrivateKey(id, kt, key, time.Duration(ttl))
+	pk := providers.NewPrivateKey(keyName, kt, key, time.Duration(ttl))
 
-	l.store.Store(id, pk)
+	l.store.Set(keyName.(string), pk)
 
-	return id, nil
+	return keyName, nil
 }
 
 func (l *LocalKeychain) SetActiveKey(kid providers.KeyIdentifier) bool {
-	kid, ok := kid.(uuid.UUID)
+	_, ok := kid.(string)
 	if !ok {
 		return false
 	}
-	key, ok := l.store.Load(kid)
+	key, ok := l.store.Get(kid.(string))
 	if !ok {
 		return false
 	}
@@ -232,17 +249,12 @@ func (l *LocalKeychain) LookupKey(criteria providers.KeyLookupCriteria) (provide
 	panic("implement me")
 }
 
-func (l *LocalKeychain) IsCurrentKey(kid providers.KeyIdentifier) bool {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (l *LocalKeychain) RetrieveKey(kid providers.KeyIdentifier) (*providers.PrivateKey, bool) {
-	kid, ok := kid.(uuid.UUID)
+	_, ok := kid.(string)
 	if !ok {
 		return nil, false
 	}
-	key, ok := l.store.Load(kid)
+	key, ok := l.store.Get(kid.(string))
 	if !ok {
 		return nil, false
 	}
@@ -250,19 +262,35 @@ func (l *LocalKeychain) RetrieveKey(kid providers.KeyIdentifier) (*providers.Pri
 	return key.(*providers.PrivateKey), true
 }
 
-func (l *LocalKeychain) RetrieveActiveKey() *providers.PrivateKey {
-	return l.activeKey
+func (l *LocalKeychain) DropKey(keyName providers.KeyIdentifier) bool {
+	if _, ok := keyName.(string); !ok {
+		return false
+	}
+	return l.store.Drop(keyName.(string), false)
+}
+func (l *LocalKeychain) MakeAndReplaceKey(keyName providers.KeyIdentifier, kt providers.KeyType, ttl int64) (providers.KeyIdentifier, error) {
+	if _, ok := keyName.(string); !ok || keyName == nil {
+		return nil, errors.New("this provider only takes string key names")
+	}
+	l.DropKey(keyName.(string))
+
+	return l.MakeNewKey(keyName, kt, ttl)
 }
 
-func (l *LocalKeychain) RevokeCertificate(certId providers.KeyIdentifier, reason string) bool {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (l *LocalKeychain) GetActiveKey() (providers.KeyIdentifier, bool) {
-	return l.activeKey, true
+func (l *LocalKeychain) MakeNewKeyIfNotExists(keyName providers.KeyIdentifier, kt providers.KeyType, ttl int64) (providers.KeyIdentifier, error) {
+	if _, ok := keyName.(string); !ok || keyName == nil {
+		return nil, errors.New("this provider only takes string key names")
+	}
+	if _, ok := l.RetrieveKey(keyName); ok {
+		return keyName, nil
+	}
+	return l.MakeNewKey(keyName, kt, ttl)
 }
 
 func (l *LocalKeychain) String() string {
 	return "LocalKeychain"
+}
+
+func (l *LocalKeychain) saveKey(keyName string) {
+
 }

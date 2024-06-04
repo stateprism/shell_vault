@@ -28,6 +28,8 @@ func (e ConfigError) Error() string {
 type ConfigurationProvider interface {
 	String() string
 	IsWriteable() bool
+	GetLocalStore() string
+	HasKey(key string) bool
 	GetString(key string) (string, error)
 	GetInt(key string) (int, error)
 	GetInt64(key string) (int64, error)

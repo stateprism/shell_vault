@@ -192,15 +192,13 @@ type KeychainProvider interface {
 	Seal() bool
 	// MakeNewKey create a new  key using KT algorithm
 	// a KeyIdentifier which is an opaque type shall be returned
-	MakeNewKey(kt KeyType, ttl int64) (KeyIdentifier, error)
-	SetActiveKey(kid KeyIdentifier) bool
-	GetActiveKey() (KeyIdentifier, bool)
+	MakeNewKey(keyName KeyIdentifier, kt KeyType, ttl int64) (KeyIdentifier, error)
+	DropKey(keyName KeyIdentifier) bool
+	MakeAndReplaceKey(keyName KeyIdentifier, kt KeyType, ttl int64) (KeyIdentifier, error)
+	MakeNewKeyIfNotExists(keyName KeyIdentifier, kt KeyType, ttl int64) (KeyIdentifier, error)
 	RetrieveKey(kid KeyIdentifier) (*PrivateKey, bool)
-	RetrieveActiveKey() *PrivateKey
-	// LookupKey should take a KeyLookupCriteria and return the appropriate
+	// LookupKey should take a KeyLookupCriteria and return the appropriate KeyIdentifier
 	LookupKey(criteria KeyLookupCriteria) (KeyIdentifier, bool)
-	// IsCurrentKey will be checked by the ca server before executing the key rollover by ttl process
-	IsCurrentKey(kid KeyIdentifier) bool
 	SetExpKeyHook(f ExpKeyHook) ExpKeyHook
 	String() string
 }

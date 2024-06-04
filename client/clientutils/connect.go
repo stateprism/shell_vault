@@ -72,15 +72,33 @@ func (cc *ClientConnection) Authenticate(user string, pass string) error {
 	req := NewUsrPwRequest(user, pass)
 
 	b := req.ToBytes()
-	resp, err := cc.client.Authenticate(cc.ctx, &pb.AuthRequest{AuthRequest: b})
+	resp, err := cc.client.Authenticate(cc.ctx, &pb.AuthRequest{AuthRequest: string(b)})
 	if err != nil {
 		return err
 	}
 
-	cc.token = resp.GetAuthToken()
+	cc.token = []byte(resp.GetAuthToken())
 	return nil
 }
 
 func (cc *ClientConnection) GetToken() []byte {
 	return cc.token
+}
+
+func (cc *ClientConnection) RequestCert(publicKey []byte) ([]byte, error) {
+	cc.lock.Lock()
+	cc.lock.Unlock()
+
+	if cc.client == nil {
+		return nil, errors.New("not connected")
+	}
+
+	resp, err := cc.client.RequestCert(cc.ctx, &pb.CertRequest{
+		PublicKey: publicKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.GetCert(), err
 }

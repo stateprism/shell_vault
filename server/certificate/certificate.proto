@@ -2,15 +2,13 @@ syntax = "proto3";
 
 option go_package = "github.com/stateprism/prisma_ca/certificate";
 
-message CertificateMetadata {
-  string name = 1;
-  string serial = 2;
-  string description = 3;
+message Certificate {
+  bytes name = 1;
+  bytes serial = 2;
+  optional string description = 3;
   uint64 created_at = 4;
-  optional uint64 ttl = 5;
-  bytes cert_uuid = 6;
-  bool is_root = 7;
-  bool is_intermediate = 8;
+  uint64 valid_from = 5;
+  uint64 valid_before = 6;
   string username = 9;
 }
 

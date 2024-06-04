@@ -2,6 +2,7 @@ package tomlprovider
 
 import (
 	"errors"
+	"path"
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
@@ -14,7 +15,7 @@ type TomlConfigProvider struct {
 	filename string
 }
 
-func New(fs afero.Fs, filename string) (*TomlConfigProvider, error) {
+func New(fs afero.Fs, filename string) (providers.ConfigurationProvider, error) {
 	stat, err := fs.Stat(filename)
 	if err != nil {
 		return nil, err
@@ -63,6 +64,10 @@ func (p *TomlConfigProvider) IsWriteable() bool {
 
 func (p *TomlConfigProvider) String() string {
 	return "TOMProvider"
+}
+
+func (p *TomlConfigProvider) GetLocalStore() string {
+	return path.Dir(p.filename)
 }
 
 func (p *TomlConfigProvider) Get(key string) (interface{}, error) {
@@ -148,6 +153,17 @@ func (p *TomlConfigProvider) GetBool(key string) (bool, error) {
 	return valBool, nil
 }
 
+func (p *TomlConfigProvider) HasKey(key string) bool {
+	if _, err := p.Get(key); err != nil {
+		return false
+	}
+	return true
+}
+
 func (p *TomlConfigProvider) Set(key string, value interface{}) error {
-	return errors.New("not implemented")
+	err := p.Set(key, value)
+	if err != nil {
+		return err
+	}
+	return nil
 }

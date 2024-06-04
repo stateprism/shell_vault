@@ -2,27 +2,30 @@ module github.com/stateprism/prisma_ca/server
 
 go 1.22.3
 
-replace github.com/stateprism/prisma_ca/rpc => ../rpc
+replace (
+	github.com/stateprism/libprisma => ../../libprisma
+	github.com/stateprism/prisma_ca/rpc => ../rpc
+)
 
 require (
 	github.com/google/uuid v1.6.0
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0
 	github.com/msteinert/pam v1.2.0
 	github.com/pelletier/go-toml/v2 v2.2.2
-	github.com/stateprism/libprisma v0.0.0-20240531192245-981a7ab3f1f0
+	github.com/stateprism/libprisma v0.0.0-00010101000000-000000000000
 	github.com/urfave/cli/v2 v2.27.2
 	go.uber.org/fx v1.21.1
-	golang.org/x/crypto v0.21.0
+	golang.org/x/crypto v0.23.0
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.1
 )
 
 require (
+	github.com/amazon-ion/ion-go v1.4.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
-	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
 	go.uber.org/dig v1.17.1 // indirect
-	golang.org/x/term v0.20.0 // indirect
 )
 
 require (

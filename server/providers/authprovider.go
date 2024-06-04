@@ -2,12 +2,14 @@ package providers
 
 import (
 	"context"
-
-	pb "github.com/stateprism/prisma_ca/rpc/caproto"
+	"github.com/stateprism/libprisma/memkv"
 )
+
+type EntityInfo struct {
+	*memkv.MemKV
+}
 
 type AuthProvider interface {
 	String() string
-	Authenticate(ctx context.Context, msg *pb.AuthRequest) (bool, error)
-	GetUserIdentifier(ctx context.Context, msg *pb.AuthRequest) string
+	Authenticate(ctx context.Context, authStr string) (*EntityInfo, error)
 }
