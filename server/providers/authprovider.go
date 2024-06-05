@@ -11,5 +11,6 @@ type EntityInfo struct {
 
 type AuthProvider interface {
 	String() string
-	Authenticate(ctx context.Context, authStr string) (*EntityInfo, error)
+	Authenticate(ctx context.Context) (string, error)
+	GetSession(ctx context.Context) (context.Context, error)
 }

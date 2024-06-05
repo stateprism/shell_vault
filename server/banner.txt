@@ -1,4 +1,8 @@
-Prisma SSH CA
+Shell Vault
+SSH Access Control System
+Version 1.0.0
+
+For manuals, documentation, and support, visit https://stateprism.com
 
 Copyright (c) %d State Prism, All rights reserved
 

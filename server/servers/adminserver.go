@@ -134,6 +134,10 @@ func (a *AdminServer) ChangeRootCert(context.Context, *pb.ChangeRootCertRequest)
 	panic("unimplemented")
 }
 
+func (a *AdminServer) AddUser(ctx context.Context, r *pb.AddUserRequest) (*pb.UserActionResponse, error) {
+	return nil, nil
+}
+
 func (a *AdminServer) StopServer(context.Context, *pb.StopServerRequest) (*pb.Empty, error) {
 	panic("unimplemented")
 }

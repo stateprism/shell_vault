@@ -4,7 +4,7 @@ option go_package = "github.com/stateprism/prisma_ca/rpc/caproto";
 
 service PrismaCa {
   rpc GetConfig(ConfigRequest) returns (ConfigReply) {}
-  rpc Authenticate(AuthRequest) returns (AuthReply) {}
+  rpc Authenticate(EmptyMsg) returns (AuthReply) {}
   rpc RequestCert(CertRequest) returns (CertReply) {}
 }
 
@@ -28,17 +28,13 @@ message ConfigReply {
   Extensions policy = 4;
 }
 
-message AuthRequest {
-  // A provider-specific authentication request
-  // for example for pam, it looks like "username\0password"
-  string auth_request = 1;
-}
+message EmptyMsg {}
 
 message AuthReply {
   // The time at which the authentication was performed
-  fixed64 auth_time = 1;
+  int64 auth_time = 1;
   // The time at which the authentication expires, or 0 if failure
-  fixed64 auth_until = 2;
+  int64 auth_until = 2;
   // The authentication token to be used for further requests
   string auth_token = 3;
   // Whether the authentication was successful
@@ -48,7 +44,6 @@ message AuthReply {
 }
 
 message CertRequest {
-  string auth_token = 1;
   bytes public_key = 3;
   fixed64 requested_validity = 2;
   optional string extendedValidityJustification = 4;

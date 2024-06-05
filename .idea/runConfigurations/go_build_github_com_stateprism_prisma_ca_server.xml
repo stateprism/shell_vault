@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go build github.com/stateprism/prisma_ca/server" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
+    <module name="prisma_ca" />
+    <working_directory value="$PROJECT_DIR$/dev_root/" />
+    <parameters value="-c etc/prisma_ca --clean-local-dbs" />
+    <envs>
+      <env name="SHELL_VAULT_ENV" value="DEV" />
+      <env name="SHELL_VAULT_ROOT_PASSWORD" value="testest" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="github.com/stateprism/prisma_ca/server" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/server/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

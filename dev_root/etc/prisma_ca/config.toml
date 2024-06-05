@@ -1,5 +1,5 @@
 [ca_server]
-listen = "localhost:5000"
+listen = "0.0.0.0:5000"
 hmac_key = "ZjBoW1OfD11lOhNvYZlEmw"
 server_id = "test_server"
 allowed_key_types = [ "ecdsa", "ed25519" ]
@@ -15,7 +15,7 @@ fs = "local"
 ttl_tick = 60
 
 [providers.auth_provider]
-realm="pam"
+realm="local"
 
 [providers.auth_providers.pam]
 allowed_groups=["*"]

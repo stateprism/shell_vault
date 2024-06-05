@@ -1,0 +1,3 @@
+[submodule "libprisma"]
+	path = libprisma
+	url = git@github.com:stateprism/libprisma.git

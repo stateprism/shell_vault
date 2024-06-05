@@ -14,6 +14,20 @@ const (
 	EVENT_TYPE_DELETE EventType = "DELETE"
 )
 
+func (e EventType) String() string {
+	switch e {
+	case EVENT_TYPE_CREATE:
+		return "CREATE"
+	case EVENT_TYPE_UPDATE:
+		return "UPDATE"
+	case EVENT_TYPE_DELETE:
+		return "DELETE"
+	default:
+		return "UNKNOWN"
+	}
+
+}
+
 type EventEntity string
 
 const (
@@ -23,23 +37,48 @@ const (
 	EVENT_ENTITY_CERTIFICATE_REVOCATION EventEntity = "CERTIFICATE_REVOCATION"
 )
 
+func (e EventEntity) String() string {
+	switch e {
+	case EVENT_ENTITY_USER:
+		return "USER"
+	case EVENT_ENTITY_CERTIFICATE:
+		return "CERTIFICATE"
+	case EVENT_ENTITY_CERTIFICATE_REQUEST:
+		return "CERTIFICATE_REQUEST"
+	case EVENT_ENTITY_CERTIFICATE_REVOCATION:
+		return "CERTIFICATE_REVOCATION"
+	default:
+		return "UNKNOWN"
+	}
+}
+
 type EventTimestampResolution string
 
 const (
-	EVENT_TS_RES_SECOND EventEntity = "SECOND"
-	EVENT_TS_RES_MS     EventEntity = "MILLIS"
-	EVENT_TS_RES_NANO   EventEntity = "NANO"
+	EVENT_TS_RES_SECOND EventTimestampResolution = "SECOND"
+	EVENT_TS_RES_MS     EventTimestampResolution = "MILLIS"
+	EVENT_TS_RES_NANO   EventTimestampResolution = "NANO"
 )
 
-func (EventTimestampResolution) String() string {
-
+func (e EventTimestampResolution) String() string {
+	switch e {
+	case EVENT_TS_RES_SECOND:
+		return "SECOND"
+	case EVENT_TS_RES_MS:
+		return "MILLIS"
+	case EVENT_TS_RES_NANO:
+		return "NANO"
+	default:
+		return "UNKNOWN"
+	}
 }
 
 type AuditEvent struct {
 	EventType
 	EventEntity
-	EventData map[string]any
-	Timestap  int64
+	EventData    map[string]any
+	Timestamp    int64
+	TsResolution EventTimestampResolution
 }
 
 type AuditEvents struct {
@@ -70,10 +109,11 @@ type AuditEvents struct {
 //	fmt.Println(auditEvent.EventData)   // Output: map[username:john_doe email:john@example.com]
 func (a *AuditEvents) New(eType EventType, eEntity EventEntity, eData map[string]any) error {
 	e := &AuditEvent{
-		EventType:   eType,
-		EventEntity: eEntity,
-		EventData:   make(map[string]any),
-		Timestap:    time.Now().UnixMilli(),
+		EventType:    eType,
+		EventEntity:  eEntity,
+		EventData:    make(map[string]any),
+		Timestamp:    time.Now().UnixMilli(),
+		TsResolution: EVENT_TS_RES_MS,
 	}
 	i := 0
 	for k, v := range eData {
@@ -92,6 +132,8 @@ func (a *AuditEvents) New(eType EventType, eEntity EventEntity, eData map[string
 		i += 1
 	}
 
+	a.Events = append(a.Events, *e)
+	return nil
 }
 
 func isPointer(v any) bool {

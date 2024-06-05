@@ -49,3 +49,10 @@ func (p *EnvProvider) IsEnvEqual(key, value string) bool {
 	}
 	return val == value
 }
+
+func (p *EnvProvider) SetEnv(key string, value string) {
+	err := os.Setenv(p.prefix+key, value)
+	if err != nil {
+		panic(err)
+	}
+}

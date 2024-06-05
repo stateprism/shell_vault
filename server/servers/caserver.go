@@ -5,8 +5,6 @@ import (
 	cryptorand "crypto/rand"
 	"fmt"
 	"golang.org/x/crypto/ssh"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"math/rand/v2"
 	"slices"
 	"time"
@@ -88,18 +86,18 @@ func NewCAServer(p CaServerParams) (*CaServer, error) {
 	return s, nil
 }
 
-func (s *CaServer) Authenticate(ctx context.Context, msg *pb.AuthRequest) (*pb.AuthReply, error) {
-
-	if msg.GetAuthRequest() == "" {
-		return nil, status.Error(codes.InvalidArgument, "field auth_request is empty, this is not allowed")
-	}
-
-	ent, err := s.Auth.Authenticate(ctx, msg.GetAuthRequest())
+func (s *CaServer) Authenticate(ctx context.Context, _ *pb.EmptyMsg) (*pb.AuthReply, error) {
+	ent, err := s.Auth.Authenticate(ctx)
 	if err != nil {
 		return nil, err
 	}
-	_ = ent
-	return &pb.AuthReply{}, nil
+	return &pb.AuthReply{
+		AuthTime:  time.Now().Unix(),
+		AuthUntil: time.Now().Add(time.Duration(s.userCertTtl) * time.Second).Unix(),
+		AuthToken: ent,
+		Success:   true,
+		Errors:    nil,
+	}, nil
 }
 
 func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.CertReply, error) {

@@ -1,7 +1,7 @@
 module github.com/stateprism/prisma_ca/client
 
 replace (
-	github.com/stateprism/libprisma => ../../libprisma
+	github.com/stateprism/libprisma => ../libprisma
 	github.com/stateprism/prisma_ca/rpc => ../rpc
 )
 
