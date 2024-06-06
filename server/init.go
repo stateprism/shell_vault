@@ -8,11 +8,11 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
 	"github.com/spf13/afero"
 	"github.com/stateprism/libprisma/memkv"
-	"github.com/stateprism/prisma_ca/server/authproviders/integratedprovider"
-	"github.com/stateprism/prisma_ca/server/configproviders/tomlprovider"
-	"github.com/stateprism/prisma_ca/server/middleware"
-	"github.com/stateprism/prisma_ca/server/providers"
-	"github.com/stateprism/prisma_ca/server/servers"
+	"github.com/stateprism/shell_vault/server/authproviders/integratedprovider"
+	"github.com/stateprism/shell_vault/server/configproviders/tomlprovider"
+	"github.com/stateprism/shell_vault/server/middleware"
+	"github.com/stateprism/shell_vault/server/providers"
+	"github.com/stateprism/shell_vault/server/servers"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -128,7 +128,7 @@ func NewAuthProvider(config providers.ConfigurationProvider, logger *zap.Logger,
 func Bootstrap() (BootStrapResult, error) {
 	configParams := BootStrapResult{}
 	app := &cli.App{
-		Name:  "prisma_ca",
+		Name:  "shell_vault",
 		Usage: "Prisma Certificate Authority",
 		Flags: []cli.Flag{
 			&cli.PathFlag{

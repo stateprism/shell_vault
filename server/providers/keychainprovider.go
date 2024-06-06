@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stateprism/prisma_ca/server/lib"
+	"github.com/stateprism/shell_vault/server/lib"
 )
 
 type KeyType int

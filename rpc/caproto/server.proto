@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/stateprism/prisma_ca/rpc/caproto";
+option go_package = "github.com/stateprism/shell_vault/rpc/caproto";
 
 service PrismaCa {
   rpc GetConfig(ConfigRequest) returns (ConfigReply) {}

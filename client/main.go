@@ -7,7 +7,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/stateprism/libprisma/cryptoutil/pkcrypto"
-	"github.com/stateprism/prisma_ca/client/clientutils"
+	"github.com/stateprism/shell_vault/client/clientutils"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ssh"
 	"os"

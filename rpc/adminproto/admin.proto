@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/stateprism/prisma_ca/rpc/adminproto";
+option go_package = "github.com/stateprism/shell_vault/rpc/adminproto";
 
 message Empty {}
 

@@ -6,8 +6,8 @@ import (
 	_ "embed"
 
 	"github.com/spf13/afero"
-	"github.com/stateprism/prisma_ca/server/configproviders/tomlprovider"
-	"github.com/stateprism/prisma_ca/server/providers"
+	"github.com/stateprism/shell_vault/server/configproviders/tomlprovider"
+	"github.com/stateprism/shell_vault/server/providers"
 )
 
 //go:embed config.toml

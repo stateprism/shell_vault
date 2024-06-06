@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	pb "github.com/stateprism/prisma_ca/rpc/adminproto"
-	"github.com/stateprism/prisma_ca/server/providers"
+	pb "github.com/stateprism/shell_vault/rpc/adminproto"
+	"github.com/stateprism/shell_vault/server/providers"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

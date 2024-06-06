@@ -1,15 +1,15 @@
-module github.com/stateprism/prisma_ca/client
+module github.com/stateprism/shell_vault/client
 
 replace (
 	github.com/stateprism/libprisma => ../libprisma
-	github.com/stateprism/prisma_ca/rpc => ../rpc
+	github.com/stateprism/shell_vault/rpc => ../rpc
 )
 
 go 1.22.3
 
 require (
 	github.com/stateprism/libprisma v0.0.0-20240531192245-981a7ab3f1f0
-	github.com/stateprism/prisma_ca/rpc v0.0.0-00010101000000-000000000000
+	github.com/stateprism/shell_vault/rpc v0.0.0-00010101000000-000000000000
 	github.com/urfave/cli/v2 v2.27.2
 	golang.org/x/crypto v0.23.0
 	google.golang.org/grpc v1.64.0

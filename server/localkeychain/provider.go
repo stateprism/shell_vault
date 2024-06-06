@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stateprism/libprisma/cryptoutil"
 	"github.com/stateprism/libprisma/cryptoutil/encryption"
-	"github.com/stateprism/prisma_ca/server/providers"
+	"github.com/stateprism/shell_vault/server/providers"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"os"

@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"sync"
 
-	pb "github.com/stateprism/prisma_ca/rpc/caproto"
+	pb "github.com/stateprism/shell_vault/rpc/caproto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

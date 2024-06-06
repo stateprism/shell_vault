@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/prisma_ca.iml" filepath="$PROJECT_DIR$/.idea/prisma_ca.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/shell_vault.iml" filepath="$PROJECT_DIR$/.idea/shell_vault.iml" />
     </modules>
   </component>
 </project>

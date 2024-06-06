@@ -1,10 +1,10 @@
-module github.com/stateprism/prisma_ca/server
+module github.com/stateprism/shell_vault/server
 
 go 1.22.3
 
 replace (
 	github.com/stateprism/libprisma => ../libprisma
-	github.com/stateprism/prisma_ca/rpc => ../rpc
+	github.com/stateprism/shell_vault/rpc => ../rpc
 )
 
 require (
@@ -45,7 +45,7 @@ require (
 
 require (
 	github.com/spf13/afero v1.11.0
-	github.com/stateprism/prisma_ca/rpc v0.0.0-00010101000000-000000000000
+	github.com/stateprism/shell_vault/rpc v0.0.0-00010101000000-000000000000
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.22.0 // indirect

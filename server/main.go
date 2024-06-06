@@ -3,11 +3,11 @@ package main
 import (
 	_ "embed"
 	"fmt"
-	"github.com/stateprism/prisma_ca/server/localkeychain"
+	"github.com/stateprism/shell_vault/server/localkeychain"
 	"time"
 
-	"github.com/stateprism/prisma_ca/server/providers"
-	"github.com/stateprism/prisma_ca/server/servers"
+	"github.com/stateprism/shell_vault/server/providers"
+	"github.com/stateprism/shell_vault/server/servers"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"

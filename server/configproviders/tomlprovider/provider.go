@@ -7,7 +7,7 @@ import (
 
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/afero"
-	"github.com/stateprism/prisma_ca/server/providers"
+	"github.com/stateprism/shell_vault/server/providers"
 )
 
 type TomlConfigProvider struct {

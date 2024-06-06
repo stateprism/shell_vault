@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/stateprism/libprisma/memkv"
-	pb "github.com/stateprism/prisma_ca/rpc/caproto"
-	"github.com/stateprism/prisma_ca/server/lib"
-	"github.com/stateprism/prisma_ca/server/providers"
+	pb "github.com/stateprism/shell_vault/rpc/caproto"
+	"github.com/stateprism/shell_vault/server/lib"
+	"github.com/stateprism/shell_vault/server/providers"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
