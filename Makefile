@@ -1,3 +1,5 @@
+PATH:=$(PATH):$(shell go env GOPATH)/bin
+
 # Default target
 all: build
 

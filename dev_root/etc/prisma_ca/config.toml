@@ -1,6 +1,5 @@
 [ca_server]
 listen = "0.0.0.0:5000"
-hmac_key = "ZjBoW1OfD11lOhNvYZlEmw"
 server_id = "test_server"
 allowed_key_types = [ "ecdsa", "ed25519" ]
 # After this many seconds the server will automatically rotate the certs private key
