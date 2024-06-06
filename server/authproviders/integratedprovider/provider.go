@@ -49,7 +49,7 @@ func New(config providers.ConfigurationProvider, kv *memkv.MemKV, log *zap.Logge
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
-	if _, err := db.Exec("SELECT principal FROM users LIMIT 1;"); err != nil {
+	if _, err := db.Exec("SELECT principal FROM users where principal = 'root';"); err != nil {
 		// Table does not exist
 		isDBInit = true
 	}
@@ -121,9 +121,10 @@ func (p *LocalProvider) Authenticate(ctx context.Context) (string, error) {
 
 	sesId := uuid.New()
 	sesInfo := memkv.NewMemKV(".", nil)
-	sesInfo.Set("session.user.username", username)
+	sesInfo.Set("session.user.username", string(username))
 	sesInfo.Set("session.user.realm", "local")
 	sesInfo.Set("session.id", sesId)
+	sesInfo.Set("session.expires", time.Now().Add(20*time.Hour))
 	p.kv.Set("sessions."+sesId.String(), entInfo)
 	data, err = json.Marshal(sesInfo.GetSerializableMap())
 	if err != nil {
@@ -164,14 +165,10 @@ func (p *LocalProvider) GetSession(ctx context.Context) (context.Context, error)
 		p.logger.Debug("Failed to unmarshal session data", zap.Error(err))
 		return nil, status.Error(codes.Unauthenticated, "Your session data is invalid")
 	}
-	sesId, ok := tokenData["session"].(map[string]any)["id"]
-	if !ok {
-		p.logger.Debug("Failed to unmarshal session data", zap.Error(err))
-		return nil, status.Error(codes.Unauthenticated, "Your session data is invalid")
-	}
 
-	entInfo, ok := p.kv.Get("sessions." + sesId.(string))
-	if !ok {
+	entInfo := memkv.NewMemKV(".", nil)
+	err = entInfo.LoadFromSerializableMap(tokenData)
+	if err != nil {
 		p.logger.Debug("Failed to unmarshal session data", zap.Error(err))
 		return nil, status.Error(codes.Unauthenticated, "Your session data is invalid")
 	}
@@ -214,13 +211,11 @@ func (p *LocalProvider) encryptSession(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	encrypted, err := secureAes.Encrypt(data)
+	encrypted, err := secureAes.EncryptToBytes(data)
 	if err != nil {
 		return nil, err
 	}
 
-	encrypted = append(encrypted, secureAes.GetIV()...)
-	encrypted = append(encrypted, secureAes.Finish()...)
 	return encrypted, nil
 }
 
@@ -230,13 +225,7 @@ func (p *LocalProvider) decryptSession(encrypted []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	tagIv := encrypted[len(encrypted)-secureAes.TagPlusIVSize():]
-	data := encrypted[:len(encrypted)-secureAes.TagPlusIVSize()]
-	iv := tagIv[:secureAes.GetIvSize()]
-	tag := tagIv[secureAes.GetIvSize():]
-	secureAes.SetIV(iv)
-
-	decrypted, err := secureAes.Decrypt(data, tag)
+	decrypted, err := secureAes.DecryptFromBytes(encrypted)
 	if err != nil {
 		return nil, err
 	}

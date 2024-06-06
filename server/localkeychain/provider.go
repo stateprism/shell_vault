@@ -8,10 +8,13 @@ import (
 	"crypto/elliptic"
 	cryptorand "crypto/rand"
 	"crypto/rsa"
+	"database/sql"
 	"errors"
 	"fmt"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/afero"
-	"github.com/stateprism/libprisma/memkv"
+	"github.com/stateprism/libprisma/cryptoutil"
+	"github.com/stateprism/libprisma/cryptoutil/encryption"
 	"github.com/stateprism/prisma_ca/server/providers"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -25,13 +28,11 @@ type LocalKeychain struct {
 	fs           afero.Fs
 	expHook      providers.ExpKeyHook
 	logger       *zap.Logger
-	store        *memkv.MemKV
-	activeKey    *providers.PrivateKey
 	ticker       *time.Ticker
 	tickInterval time.Duration
 	tickStop     chan struct{}
-	isLocal      bool
-	localPath    string
+	db           *sql.DB
+	eKey         []byte
 }
 
 type LKParams struct {
@@ -39,15 +40,19 @@ type LKParams struct {
 	Lc     fx.Lifecycle
 	Config providers.ConfigurationProvider
 	Logger *zap.Logger
-}
-
-type onDiskKey struct {
-	Name string
-	Ttl  uint64
-	Key  crypto.PrivateKey
+	Env    *providers.EnvProvider
 }
 
 func NewLocalKeychain(par LKParams) (providers.KeychainProvider, error) {
+	// setup key encryption
+	if par.Env.GetEnvOrDefault("KEK", "") == "" {
+		return nil, errors.New("local keychain provider requires a key encryption key")
+	}
+	kek := par.Env.GetEnvOrDefault("KEK", "")
+	// clear the KEK from the environment
+	par.Env.SetEnv("KEK", "")
+
+	// general initialization
 	kcPath, err := par.Config.GetString("providers.local_keychain_provider.path")
 	if err != nil {
 		return nil, err
@@ -83,6 +88,7 @@ func NewLocalKeychain(par LKParams) (providers.KeychainProvider, error) {
 		if errDir != nil {
 			return nil, err
 		}
+		stat, _ = fs.Stat(kcPath)
 	} else if err != nil {
 		return nil, err
 	}
@@ -91,12 +97,22 @@ func NewLocalKeychain(par LKParams) (providers.KeychainProvider, error) {
 		return nil, fmt.Errorf("path %s is a file, this provider requires a directory", kcPath)
 	}
 
-	store := memkv.NewMemKV("/", &memkv.Opts{CaseInsensitive: true})
-
+	db, err := sql.Open("sqlite3", filepath.Join(kcPath, "keys.db"))
+	if err != nil {
+		return nil, err
+	}
 	lk := &LocalKeychain{
 		fs:     fs,
-		store:  store,
 		logger: par.Logger,
+		db:     db,
+		eKey:   cryptoutil.SeededRandomData([]byte(kek), 32),
+	}
+
+	if _, err := db.Exec(KeychainExists); err != nil {
+		err := lk.initDB()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Start the ttl ticker, we check for expired every minute
@@ -117,6 +133,10 @@ func NewLocalKeychain(par LKParams) (providers.KeychainProvider, error) {
 		},
 		OnStop: func(ctx context.Context) error {
 			close(lk.tickStop)
+			err := lk.db.Close()
+			if err != nil {
+				return err
+			}
 			return nil
 		},
 	})
@@ -151,6 +171,10 @@ func (l *LocalKeychain) Unseal(key []byte) bool {
 }
 
 func (l *LocalKeychain) Seal() bool {
+	err := l.db.Close()
+	if err != nil {
+		return false
+	}
 	return true
 }
 
@@ -195,11 +219,9 @@ func (l *LocalKeychain) MakeNewKey(keyName providers.KeyIdentifier, kt providers
 	if _, ok := keyName.(string); !ok || keyName == nil {
 		return nil, errors.New("this provider only takes string key names")
 	}
-	// allow to rotate the rootKey if needed, but
-	if l.store.Contains(keyName.(string)) {
-		return nil, errors.New("this key name is already contained in this keyring")
-	}
+
 	var key crypto.PrivateKey
+	var encrypted []byte
 	var err error
 	switch kt {
 	case providers.KEY_TYPE_ED25519:
@@ -217,25 +239,22 @@ func (l *LocalKeychain) MakeNewKey(keyName providers.KeyIdentifier, kt providers
 		return nil, err
 	}
 
-	pk := providers.NewPrivateKey(keyName, kt, key, time.Duration(ttl))
+	providers.NewPrivateKey(keyName, kt, key, time.Duration(ttl))
+	enc, err := encryption.NewSecureAES(l.eKey)
+	if err != nil {
+		return nil, err
+	}
+	encrypted, err = enc.EncryptToBytes(key.(ed25519.PrivateKey).Seed())
+	if err != nil {
+		return nil, err
+	}
 
-	l.store.Set(keyName.(string), pk)
+	_, err = l.db.Exec(InsertKey, keyName, kt.String(), encrypted, ttl)
+	if err != nil {
+		return nil, err
+	}
 
 	return keyName, nil
-}
-
-func (l *LocalKeychain) SetActiveKey(kid providers.KeyIdentifier) bool {
-	_, ok := kid.(string)
-	if !ok {
-		return false
-	}
-	key, ok := l.store.Get(kid.(string))
-	if !ok {
-		return false
-	}
-
-	l.activeKey, _ = key.(*providers.PrivateKey)
-	return true
 }
 
 func (l *LocalKeychain) SetExpKeyHook(f providers.ExpKeyHook) providers.ExpKeyHook {
@@ -249,25 +268,48 @@ func (l *LocalKeychain) LookupKey(criteria providers.KeyLookupCriteria) (provide
 	panic("implement me")
 }
 
-func (l *LocalKeychain) RetrieveKey(kid providers.KeyIdentifier) (*providers.PrivateKey, bool) {
+func (l *LocalKeychain) RetrieveKey(kid providers.KeyIdentifier) (*providers.PrivateKey, error) {
 	_, ok := kid.(string)
 	if !ok {
-		return nil, false
+		return nil, errors.New("this provider only takes string key names")
 	}
-	key, ok := l.store.Get(kid.(string))
-	if !ok {
-		return nil, false
+	encryptedKey := make([]byte, 64)
+	row := l.db.QueryRow(SelectKey, kid)
+	var keyType string
+	var ttl int64
+	err := row.Scan(&encryptedKey, &keyType, &ttl)
+	if err != nil {
+		return nil, err
 	}
-
-	return key.(*providers.PrivateKey), true
+	enc, err := encryption.NewSecureAES(l.eKey)
+	if err != nil {
+		return nil, err
+	}
+	key, err := enc.DecryptFromBytes(encryptedKey)
+	if err != nil {
+		return nil, err
+	}
+	switch providers.KTFromString(keyType) {
+	case providers.KEY_TYPE_ED25519:
+		k := ed25519.NewKeyFromSeed(key)
+		return providers.NewPrivateKey(kid, providers.KEY_TYPE_ED25519, k, time.Duration(ttl)), nil
+	default:
+		panic("unhandled default case")
+	}
 }
 
 func (l *LocalKeychain) DropKey(keyName providers.KeyIdentifier) bool {
 	if _, ok := keyName.(string); !ok {
 		return false
 	}
-	return l.store.Drop(keyName.(string), false)
+	_, err := l.db.Exec(DropKey, keyName)
+	if err != nil {
+		l.logger.Error("failed to delete key", zap.Error(err))
+		return false
+	}
+	return true
 }
+
 func (l *LocalKeychain) MakeAndReplaceKey(keyName providers.KeyIdentifier, kt providers.KeyType, ttl int64) (providers.KeyIdentifier, error) {
 	if _, ok := keyName.(string); !ok || keyName == nil {
 		return nil, errors.New("this provider only takes string key names")
@@ -281,7 +323,7 @@ func (l *LocalKeychain) MakeNewKeyIfNotExists(keyName providers.KeyIdentifier, k
 	if _, ok := keyName.(string); !ok || keyName == nil {
 		return nil, errors.New("this provider only takes string key names")
 	}
-	if _, ok := l.RetrieveKey(keyName); ok {
+	if _, err := l.RetrieveKey(keyName); err != nil {
 		return keyName, nil
 	}
 	return l.MakeNewKey(keyName, kt, ttl)
@@ -293,4 +335,13 @@ func (l *LocalKeychain) String() string {
 
 func (l *LocalKeychain) saveKey(keyName string) {
 
+}
+
+func (l *LocalKeychain) initDB() error {
+	_, err := l.db.Exec(CreateTables)
+	if err != nil {
+		l.logger.Fatal("failed to create key table", zap.Error(err))
+		return err
+	}
+	return nil
 }

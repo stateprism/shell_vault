@@ -50,7 +50,7 @@ message CertRequest {
 }
 
 message CertReply {
-  bytes cert = 1;
+  string cert = 1;
   fixed64 validUntil = 2;
 }
 

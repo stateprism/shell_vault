@@ -5,6 +5,8 @@ import (
 	cryptorand "crypto/rand"
 	"fmt"
 	"golang.org/x/crypto/ssh"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"math/rand/v2"
 	"slices"
 	"time"
@@ -101,25 +103,49 @@ func (s *CaServer) Authenticate(ctx context.Context, _ *pb.EmptyMsg) (*pb.AuthRe
 }
 
 func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.CertReply, error) {
-	pko, _ := s.KProvider.RetrieveKey("rootKey")
+	pko, err := s.KProvider.RetrieveKey("rootKey")
+	if err != nil {
+		s.Log.Fatal("Root key not found", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Internal error")
+	}
 	pkr := pko.UnwrapKey()
 	signer, err := ssh.NewSignerFromKey(pkr)
+	if err != nil {
+		s.Log.Fatal("Error creating signer", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Internal error")
+	}
+	session := ctx.Value("session").(*memkv.MemKV)
+	if session == nil {
+		return nil, fmt.Errorf("session is nil")
+	}
 
 	pubk, err := ssh.ParsePublicKey(msg.PublicKey)
 	if err != nil {
 		return nil, err
 	}
 	serial := rand.Uint64()
+	principal, ok := session.Get("session.user.username")
+	if !ok {
+		return nil, fmt.Errorf("principal not found")
+	}
 	cert := ssh.Certificate{
 		Key:         pubk,
 		Serial:      serial,
 		ValidAfter:  uint64(time.Now().Add(1 * time.Second).Unix()),
 		ValidBefore: uint64(time.Now().Add(time.Duration(s.userCertTtl) * time.Second).Unix()),
 		CertType:    ssh.UserCert,
+		ValidPrincipals: []string{
+			principal.(string),
+		},
 	}
-	_ = cert.SignCert(cryptorand.Reader, signer)
+	err = cert.SignCert(cryptorand.Reader, signer)
+	if err != nil {
+		s.Log.Error("Error signing cert", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Internal error")
+	}
 	return &pb.CertReply{
-		Cert: ssh.MarshalAuthorizedKey(&cert),
+		Cert:       string(ssh.MarshalAuthorizedKey(&cert)),
+		ValidUntil: cert.ValidBefore,
 	}, nil
 }
 
@@ -153,9 +179,16 @@ func (s *CaServer) RegisterServer(srv *grpc.Server) {
 }
 
 func (s *CaServer) rotateRootKey() error {
-	_, err := s.KProvider.MakeAndReplaceKey("rootKey", s.rootKt, s.rootTtl)
-	if err != nil {
+	key, err := s.KProvider.RetrieveKey("rootKey")
+	if err != nil && err.Error() != "sql: no rows in result set" {
 		return err
+	}
+	if (err != nil && err.Error() == "sql: no rows in result set") || time.Now().Unix() > time.Now().Add(key.GetTtl()).Unix() {
+		s.Log.Info("Rotating root key")
+		_, err := s.KProvider.MakeAndReplaceKey("rootKey", s.rootKt, s.rootTtl)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

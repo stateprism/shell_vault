@@ -6,6 +6,7 @@
     <envs>
       <env name="SHELL_VAULT_ENV" value="DEV" />
       <env name="SHELL_VAULT_ROOT_PASSWORD" value="testest" />
+      <env name="SHELL_VAULT_KEK" value="testkekkey" />
     </envs>
     <kind value="PACKAGE" />
     <package value="github.com/stateprism/prisma_ca/server" />

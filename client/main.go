@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto"
 	"crypto/ed25519"
-	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"github.com/stateprism/libprisma/cryptoutil/pkcrypto"
@@ -49,6 +48,27 @@ func main() {
 					}
 					defer client.Close()
 
+					// authenticate
+					// ask for username and password
+					fmt.Println("Enter username:")
+					var username string
+					_, err = fmt.Scan(&username)
+					if err != nil {
+						return err
+					}
+
+					fmt.Println("Enter password:")
+					var password string
+					_, err = fmt.Scan(&password)
+					if err != nil {
+						return err
+					}
+
+					err = client.Authenticate(username, password)
+					if err != nil {
+						return err
+					}
+
 					k := pkcrypto.Ed25519.NewKey()
 					pk := k.(ed25519.PrivateKey)
 					var pub crypto.PublicKey
@@ -85,8 +105,7 @@ func main() {
 						return err
 					}
 					cert := certK.(*ssh.Certificate)
-					certStr := fmt.Sprintf("%s %s", cert.Type(), base64.StdEncoding.EncodeToString(certBytes))
-					err = os.WriteFile(c.Path("output")+".cert.pub", []byte(certStr), 0600)
+					err = os.WriteFile(c.Path("output")+".cert.pub", certBytes, 0600)
 					if err != nil {
 						return err
 					}

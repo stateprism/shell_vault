@@ -196,7 +196,7 @@ type KeychainProvider interface {
 	DropKey(keyName KeyIdentifier) bool
 	MakeAndReplaceKey(keyName KeyIdentifier, kt KeyType, ttl int64) (KeyIdentifier, error)
 	MakeNewKeyIfNotExists(keyName KeyIdentifier, kt KeyType, ttl int64) (KeyIdentifier, error)
-	RetrieveKey(kid KeyIdentifier) (*PrivateKey, bool)
+	RetrieveKey(kid KeyIdentifier) (*PrivateKey, error)
 	// LookupKey should take a KeyLookupCriteria and return the appropriate KeyIdentifier
 	LookupKey(criteria KeyLookupCriteria) (KeyIdentifier, bool)
 	SetExpKeyHook(f ExpKeyHook) ExpKeyHook

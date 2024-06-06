@@ -2,7 +2,10 @@ package clientutils
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
+	"fmt"
+	"google.golang.org/grpc/metadata"
 	"sync"
 
 	pb "github.com/stateprism/prisma_ca/rpc/caproto"
@@ -12,7 +15,7 @@ import (
 
 type ClientConnection struct {
 	lock            sync.Mutex
-	token           []byte
+	token           string
 	client          pb.PrismaCaClient
 	conn            *grpc.ClientConn
 	ctx             context.Context
@@ -22,7 +25,7 @@ type ClientConnection struct {
 func NewClientConnection(ctx context.Context) *ClientConnection {
 	return &ClientConnection{
 		lock:            sync.Mutex{},
-		token:           nil,
+		token:           "",
 		client:          nil,
 		isAuthenticated: false,
 		ctx:             ctx,
@@ -68,20 +71,24 @@ func (cc *ClientConnection) Authenticate(user string, pass string) error {
 	if cc.client == nil {
 		return errors.New("not connected")
 	}
-
-	req := NewUsrPwRequest(user, pass)
-
-	b := req.ToBytes()
-	resp, err := cc.client.Authenticate(cc.ctx, &pb.AuthRequest{AuthRequest: string(b)})
+	loginData := make([]byte, len(user)+len(pass)+1)
+	copy(loginData, user)
+	loginData[len(user)] = 0x1E
+	copy(loginData[len(user)+1:], pass)
+	md := metadata.New(map[string]string{"authorization": fmt.Sprintf("local %s", base64.StdEncoding.EncodeToString(loginData))})
+	ctx := metadata.NewOutgoingContext(cc.ctx, md)
+	resp, err := cc.client.Authenticate(ctx, &pb.EmptyMsg{})
 	if err != nil {
 		return err
 	}
 
-	cc.token = []byte(resp.GetAuthToken())
+	cc.token = resp.GetAuthToken()
+	cc.isAuthenticated = true
+	cc.ctx = metadata.NewOutgoingContext(cc.ctx, metadata.New(map[string]string{"authorization": fmt.Sprintf("encrypted %s", cc.token)}))
 	return nil
 }
 
-func (cc *ClientConnection) GetToken() []byte {
+func (cc *ClientConnection) GetToken() string {
 	return cc.token
 }
 
@@ -100,5 +107,5 @@ func (cc *ClientConnection) RequestCert(publicKey []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return resp.GetCert(), err
+	return []byte(resp.GetCert()), err
 }
