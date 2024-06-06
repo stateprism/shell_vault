@@ -124,19 +124,17 @@ func (p *LocalProvider) Authenticate(ctx context.Context) (string, error) {
 	sesInfo.Set("session.user.username", username)
 	sesInfo.Set("session.user.realm", "local")
 	sesInfo.Set("session.id", sesId)
-	aesCyp, _ := encryption.NewSecureAESWithSafeKey(p.ephemeralKey)
+	p.kv.Set("sessions."+sesId.String(), entInfo)
 	data, err = json.Marshal(sesInfo.GetSerializableMap())
 	if err != nil {
 		return "", status.Error(codes.Internal, "An internal error occurred")
 	}
-	encrypted, err := aesCyp.Encrypt(data)
+	encrypted, err := p.encryptSession(data)
 	if err != nil {
 		return "", status.Error(codes.Internal, "An internal error occurred")
 	}
-	p.kv.Set("sessions."+sesId.String(), entInfo)
-	encrypted = append(encrypted, []byte{0x1E}...)
-	encrypted = append(encrypted, aesCyp.GetIV()...)
-	return base64.StdEncoding.EncodeToString(encrypted), nil
+	token = base64.StdEncoding.EncodeToString(encrypted)
+	return token, nil
 }
 
 func (p *LocalProvider) GetSession(ctx context.Context) (context.Context, error) {
@@ -145,19 +143,19 @@ func (p *LocalProvider) GetSession(ctx context.Context) (context.Context, error)
 		return nil, err
 	}
 
-	tokenBytes := make([]byte, len(token))
-	_, err = base64.StdEncoding.Decode(tokenBytes, []byte(token))
+	tokenBytes := make([]byte, base64.StdEncoding.DecodedLen(len(token)))
+	// trim any null bytes from the right
+	n, err := base64.StdEncoding.Decode(tokenBytes, []byte(token))
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, "Your request is not acceptable by any of the enabled auth providers")
 	}
-	data, iv, found := bytes.Cut(tokenBytes, []byte{0x1E})
-	if !found {
-		return nil, status.Error(codes.Unauthenticated, "Your request is not acceptable by any of the enabled auth providers")
+	if n < 32 {
+		return nil, status.Error(codes.Unauthenticated, "Your session data is invalid")
 	}
-	aesCyp, _ := encryption.NewSecureAESWithSafeKey(p.ephemeralKey)
-	aesCyp.SetIV(iv)
-	decrypted, err := aesCyp.Decrypt(data)
+	tokenBytes = tokenBytes[:n]
+	decrypted, err := p.decryptSession(tokenBytes)
 	if err != nil {
+		p.logger.Debug("Failed to unmarshal session data", zap.Error(err))
 		return nil, status.Error(codes.Unauthenticated, "Your session data is invalid")
 	}
 	tokenData := make(map[string]any)
@@ -208,4 +206,40 @@ func (p *LocalProvider) InitNewDB() error {
 		return fmt.Errorf("failed to add root user: %w", err)
 	}
 	return nil
+}
+
+func (p *LocalProvider) encryptSession(data []byte) ([]byte, error) {
+	secureAes, err := encryption.NewSecureAESWithSafeKey(p.ephemeralKey)
+	if err != nil {
+		return nil, err
+	}
+
+	encrypted, err := secureAes.Encrypt(data)
+	if err != nil {
+		return nil, err
+	}
+
+	encrypted = append(encrypted, secureAes.GetIV()...)
+	encrypted = append(encrypted, secureAes.Finish()...)
+	return encrypted, nil
+}
+
+func (p *LocalProvider) decryptSession(encrypted []byte) ([]byte, error) {
+	secureAes, err := encryption.NewSecureAESWithSafeKey(p.ephemeralKey)
+	if err != nil {
+		return nil, err
+	}
+
+	tagIv := encrypted[len(encrypted)-secureAes.TagPlusIVSize():]
+	data := encrypted[:len(encrypted)-secureAes.TagPlusIVSize()]
+	iv := tagIv[:secureAes.GetIvSize()]
+	tag := tagIv[secureAes.GetIvSize():]
+	secureAes.SetIV(iv)
+
+	decrypted, err := secureAes.Decrypt(data, tag)
+	if err != nil {
+		return nil, err
+	}
+
+	return decrypted, nil
 }
