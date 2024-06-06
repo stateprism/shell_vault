@@ -38,6 +38,7 @@ type CaServer struct {
 
 type CaServerParams struct {
 	fx.In
+	LC        fx.Lifecycle
 	Logger    *zap.Logger
 	Config    providers.ConfigurationProvider
 	Auth      providers.AuthProvider
@@ -81,9 +82,18 @@ func NewCAServer(p CaServerParams) (*CaServer, error) {
 
 	s.KProvider.SetExpKeyHook(s.expKeyHook)
 
-	if err := s.rotateRootKey(); err != nil {
-		return nil, err
-	}
+	p.LC.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			s.Log.Info("Checking for root key rotation necessity on startup")
+			if err := s.rotateRootKey(); err != nil {
+				return err
+			}
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			return nil
+		},
+	})
 
 	return s, nil
 }
@@ -183,13 +193,23 @@ func (s *CaServer) rotateRootKey() error {
 	if err != nil && err.Error() != "sql: no rows in result set" {
 		return err
 	}
-	if (err != nil && err.Error() == "sql: no rows in result set") || time.Now().Unix() > time.Now().Add(key.GetTtl()).Unix() {
+	if err != nil && err.Error() == "sql: no rows in result set" {
+		s.Log.Info("Root key not found, creating new key")
+		_, err := s.KProvider.MakeAndReplaceKey("rootKey", s.rootKt, s.rootTtl)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	if time.Now().Unix() > time.Now().Add(key.GetTtl()).Unix() {
 		s.Log.Info("Rotating root key")
 		_, err := s.KProvider.MakeAndReplaceKey("rootKey", s.rootKt, s.rootTtl)
 		if err != nil {
 			return err
 		}
+		return nil
 	}
+	s.Log.Info("Root key does not need to be rotated")
 	return nil
 }
 

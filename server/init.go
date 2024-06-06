@@ -111,7 +111,7 @@ func NewAuthProvider(config providers.ConfigurationProvider, logger *zap.Logger,
 	}
 	switch providerName {
 	case "local":
-		logger.Info("Setup authentication with PAM provider")
+		logger.Info("Setup authentication with local provider")
 		return integratedprovider.New(config, kv, logger)
 	default:
 		return nil, fmt.Errorf("unknown auth provider")
