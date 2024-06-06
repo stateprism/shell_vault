@@ -162,6 +162,22 @@ func (p *PrivateKey) UnwrapKey() crypto.PrivateKey {
 	}
 }
 
+func (p *PrivateKey) GetPublicKey() crypto.PublicKey {
+	switch p.kType {
+	case KEY_TYPE_ED25519:
+		k := p.key.(ed25519.PrivateKey)
+		return k.Public()
+	case KEY_TYPE_ECDSA_256, KEY_TYPE_ECDSA_384, KEY_TYPE_ECDSA_521:
+		k := p.key.(ecdsa.PrivateKey)
+		return k.Public()
+	case KEY_TYPE_RSA_2048, KEY_TYPE_RSA_4096:
+		k := p.key.(rsa.PrivateKey)
+		return k.Public()
+	default:
+		panic("unknown key type on unwrap")
+	}
+}
+
 func NewPrivateKey(id KeyIdentifier, kt KeyType, key crypto.PrivateKey, ttl time.Duration) *PrivateKey {
 	p := &PrivateKey{}
 	p.id = id

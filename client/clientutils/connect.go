@@ -109,3 +109,12 @@ func (cc *ClientConnection) RequestCert(publicKey []byte) ([]byte, error) {
 
 	return []byte(resp.GetCert()), err
 }
+
+func (cc *ClientConnection) GetCurrentCert() (string, int64, error) {
+	r, err := cc.client.GetCurrentKey(cc.ctx, &pb.EmptyMsg{})
+	if err != nil {
+		return "", 0, err
+	}
+
+	return r.GetCert(), r.GetValidUntil(), nil
+}

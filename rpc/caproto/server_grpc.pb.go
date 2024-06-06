@@ -25,6 +25,7 @@ type PrismaCaClient interface {
 	GetConfig(ctx context.Context, in *ConfigRequest, opts ...grpc.CallOption) (*ConfigReply, error)
 	Authenticate(ctx context.Context, in *EmptyMsg, opts ...grpc.CallOption) (*AuthReply, error)
 	RequestCert(ctx context.Context, in *CertRequest, opts ...grpc.CallOption) (*CertReply, error)
+	GetCurrentKey(ctx context.Context, in *EmptyMsg, opts ...grpc.CallOption) (*CertReply, error)
 }
 
 type prismaCaClient struct {
@@ -62,6 +63,15 @@ func (c *prismaCaClient) RequestCert(ctx context.Context, in *CertRequest, opts 
 	return out, nil
 }
 
+func (c *prismaCaClient) GetCurrentKey(ctx context.Context, in *EmptyMsg, opts ...grpc.CallOption) (*CertReply, error) {
+	out := new(CertReply)
+	err := c.cc.Invoke(ctx, "/PrismaCa/GetCurrentKey", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PrismaCaServer is the server API for PrismaCa service.
 // All implementations must embed UnimplementedPrismaCaServer
 // for forward compatibility
@@ -69,6 +79,7 @@ type PrismaCaServer interface {
 	GetConfig(context.Context, *ConfigRequest) (*ConfigReply, error)
 	Authenticate(context.Context, *EmptyMsg) (*AuthReply, error)
 	RequestCert(context.Context, *CertRequest) (*CertReply, error)
+	GetCurrentKey(context.Context, *EmptyMsg) (*CertReply, error)
 	mustEmbedUnimplementedPrismaCaServer()
 }
 
@@ -84,6 +95,9 @@ func (UnimplementedPrismaCaServer) Authenticate(context.Context, *EmptyMsg) (*Au
 }
 func (UnimplementedPrismaCaServer) RequestCert(context.Context, *CertRequest) (*CertReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestCert not implemented")
+}
+func (UnimplementedPrismaCaServer) GetCurrentKey(context.Context, *EmptyMsg) (*CertReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCurrentKey not implemented")
 }
 func (UnimplementedPrismaCaServer) mustEmbedUnimplementedPrismaCaServer() {}
 
@@ -152,6 +166,24 @@ func _PrismaCa_RequestCert_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PrismaCa_GetCurrentKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EmptyMsg)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PrismaCaServer).GetCurrentKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/PrismaCa/GetCurrentKey",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PrismaCaServer).GetCurrentKey(ctx, req.(*EmptyMsg))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PrismaCa_ServiceDesc is the grpc.ServiceDesc for PrismaCa service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -170,6 +202,10 @@ var PrismaCa_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RequestCert",
 			Handler:    _PrismaCa_RequestCert_Handler,
+		},
+		{
+			MethodName: "GetCurrentKey",
+			Handler:    _PrismaCa_GetCurrentKey_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

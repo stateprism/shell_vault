@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
 	"github.com/spf13/afero"
 	"github.com/stateprism/libprisma/memkv"
@@ -21,6 +22,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 )
 
 type BootStrapResult struct {
@@ -61,6 +63,7 @@ func GrpcListen(p GrpcServerParams) []*grpc.Server {
 	cS := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			selector.UnaryServerInterceptor(middleware.UnaryServerInterceptor(p.CaServer.Auth.GetSession), selector.MatchFunc(skipAuthService)),
+			recovery.UnaryServerInterceptor(),
 		),
 	)
 
@@ -101,7 +104,11 @@ func GrpcListen(p GrpcServerParams) []*grpc.Server {
 }
 
 func skipAuthService(_ context.Context, c interceptors.CallMeta) bool {
-	return c.FullMethod() != "/PrismaCa/Authenticate"
+	exemptList := []string{
+		"/PrismaCa/Authenticate",
+		"/PrismaCa/GetCurrentKey",
+	}
+	return !slices.Contains(exemptList, c.FullMethod())
 }
 
 func NewAuthProvider(config providers.ConfigurationProvider, logger *zap.Logger, kv *memkv.MemKV) (providers.AuthProvider, error) {

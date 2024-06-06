@@ -149,15 +149,39 @@ func ttlTick(l *LocalKeychain) {
 		select {
 		case <-l.ticker.C:
 			now := time.Now()
+			toDrop := make([]providers.KeyIdentifier, 0)
 			l.logger.Debug(
 				"Checking ttl of stored keys:",
 				zap.Time("event_at", now),
 				zap.Time("next_check", now.Add(60*time.Second)),
 			)
+			rows, err := l.db.Query(SelectExpiredKeys, now.UTC().Unix())
+			if err != nil {
+				l.logger.Error("failed to query for expired keys", zap.Error(err))
+				continue
+			}
+			for rows.Next() {
+				var keyName string
+				err := rows.Scan(&keyName)
+				if err != nil {
+					l.logger.Error("failed to scan key name", zap.Error(err))
+					continue
+				}
+				l.logger.Info("Key expired", zap.String("key_name", keyName))
+				toDrop = append(toDrop, keyName)
+			}
+			err = rows.Close()
+			if err != nil {
+				panic(err)
+			}
+			for _, k := range toDrop {
+				l.DropKey(k)
+			}
 			if l.expHook == nil {
 				l.logger.Warn("No hook set on ttl provider to notify ca")
+				continue
 			}
-			l.expHook(l, nil)
+			l.expHook(l, toDrop)
 		case <-l.tickStop:
 			l.logger.Info("stopping ttl ticks")
 			l.ticker.Stop()
@@ -249,7 +273,8 @@ func (l *LocalKeychain) MakeNewKey(keyName providers.KeyIdentifier, kt providers
 		return nil, err
 	}
 
-	_, err = l.db.Exec(InsertKey, keyName, kt.String(), encrypted, ttl)
+	validTo := time.Now().UTC().Add(time.Duration(ttl) * time.Second)
+	_, err = l.db.Exec(InsertKey, keyName, kt.String(), encrypted, validTo, ttl)
 	if err != nil {
 		return nil, err
 	}

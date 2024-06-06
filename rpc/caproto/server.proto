@@ -6,6 +6,7 @@ service PrismaCa {
   rpc GetConfig(ConfigRequest) returns (ConfigReply) {}
   rpc Authenticate(EmptyMsg) returns (AuthReply) {}
   rpc RequestCert(CertRequest) returns (CertReply) {}
+  rpc GetCurrentKey(EmptyMsg) returns (CertReply) {}
 }
 
 message Errors { map<string, string> errors = 1; }
@@ -51,7 +52,7 @@ message CertRequest {
 
 message CertReply {
   string cert = 1;
-  fixed64 validUntil = 2;
+  int64 validUntil = 2;
 }
 
 enum ExtensionType {

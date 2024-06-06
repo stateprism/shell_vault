@@ -6,12 +6,13 @@ CREATE TABLE IF NOT EXISTS keychain (
     	key_type VARCHAR(255) NOT NULL,
     	key_value BLOB NOT NULL,
     	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    	expiry_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     	ttl BIGINT NOT NULL
 );
 `
 
 const InsertKey string = `
-INSERT INTO keychain (key_name, key_type, key_value, ttl) VALUES (?, ?, ?, ?) RETURNING key_name;
+INSERT INTO keychain (key_name, key_type, key_value, expiry_at, ttl) VALUES (?, ?, ?, ?, ?) RETURNING key_name;
 `
 
 const SelectKey string = `
@@ -24,4 +25,8 @@ SELECT key_name FROM keychain LIMIT 1;
 
 const DropKey string = `
 DELETE FROM keychain WHERE key_name = ?;
+`
+
+const SelectExpiredKeys = `
+SELECT key_name FROM keychain WHERE CURRENT_TIMESTAMP > expiry_at;
 `

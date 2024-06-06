@@ -112,6 +112,26 @@ func (s *CaServer) Authenticate(ctx context.Context, _ *pb.EmptyMsg) (*pb.AuthRe
 	}, nil
 }
 
+func (s *CaServer) GetCurrentKey(ctx context.Context, _ *pb.EmptyMsg) (*pb.CertReply, error) {
+	pko, err := s.KProvider.RetrieveKey("rootKey")
+	if err != nil {
+		s.Log.Fatal("Root key not found", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Internal error")
+	}
+	pk, err := ssh.NewPublicKey(pko.GetPublicKey())
+	if err != nil {
+		s.Log.Fatal("Error getting public key", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Internal error")
+	}
+
+	ttl := time.Now().Add(pko.GetTtl() * time.Second).UTC().Unix()
+
+	return &pb.CertReply{
+		Cert:       string(ssh.MarshalAuthorizedKey(pk)),
+		ValidUntil: ttl,
+	}, nil
+}
+
 func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.CertReply, error) {
 	pko, err := s.KProvider.RetrieveKey("rootKey")
 	if err != nil {
@@ -141,8 +161,8 @@ func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.Ce
 	cert := ssh.Certificate{
 		Key:         pubk,
 		Serial:      serial,
-		ValidAfter:  uint64(time.Now().Add(1 * time.Second).Unix()),
-		ValidBefore: uint64(time.Now().Add(time.Duration(s.userCertTtl) * time.Second).Unix()),
+		ValidAfter:  uint64(time.Now().Add(1 * time.Second).UTC().Unix()),
+		ValidBefore: uint64(time.Now().Add(time.Duration(s.userCertTtl) * time.Second).UTC().Unix()),
 		CertType:    ssh.UserCert,
 		ValidPrincipals: []string{
 			principal.(string),
@@ -155,7 +175,7 @@ func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.Ce
 	}
 	return &pb.CertReply{
 		Cert:       string(ssh.MarshalAuthorizedKey(&cert)),
-		ValidUntil: cert.ValidBefore,
+		ValidUntil: int64(cert.ValidBefore),
 	}, nil
 }
 
