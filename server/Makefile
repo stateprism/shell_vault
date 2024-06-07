@@ -8,7 +8,6 @@ VERSION:=$(shell cat version.txt)
 build:
 	go build \
 	-ldflags="-w -s -X main.Version=$(VERSION) -X main.BuildDate=$(BUILD_DATE) -X main.CommitInfo=$(BUILD_COMMIT)" \
- 	-gcflags=all="-l -B" \
  	-tags "sqlite_secure_delete" \
  	-o ../bin/ ./...
 

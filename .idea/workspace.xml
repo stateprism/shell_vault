@@ -4,60 +4,20 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b432118a-b097-4db4-a10f-b85e77e41ed9" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/client/version.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/do_release.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/releaser/Dockerfile" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/server/consts/config.toml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/server/consts/consts.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/server/consts/first_setup.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/server/consts/server.env" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/server/version.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/units/shell_vault.service" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/prisma_ca.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/runConfigurations/go_build_github_com_stateprism_prisma_ca_client.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/runConfigurations/go_build_github_com_stateprism_prisma_ca_server.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/sqldialects.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/build_dist.sh" beforeDir="false" afterPath="$PROJECT_DIR$/build_dist.sh" afterDir="false" />
+    <list default="true" id="b432118a-b097-4db4-a10f-b85e77e41ed9" name="Changes" comment="Code fixes and refactoring plus release process outline">
+      <change afterPath="$PROJECT_DIR$/libprisma/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/libprisma/cryptoutil/encryption/secureencryption.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/libprisma/cryptoutil/tool/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/client/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/client/go.mod" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/client/go.sum" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev_root/etc/shell_vault/config.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dev_root/etc/shell_vault/config.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/devserver.sh" beforeDir="false" afterPath="$PROJECT_DIR$/devserver.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/libprisma" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libprisma/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libprisma/cryptoutil/common.go" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/cryptoutil/common.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/libprisma/cryptoutil/encryption/aes.go" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/cryptoutil/encryption/aes.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libprisma/cryptoutil/kdf/derivedkey.go" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/cryptoutil/kdf/derivedkey.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libprisma/cryptoutil/kdf/pbkdf2key.go" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/cryptoutil/kdf/pbkdf2key.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libprisma/cryptoutil/kdf/pbkdf2key_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/cryptoutil/kdf/pbkdf2key_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libprisma/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/go.mod" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libprisma/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/go.sum" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libprisma/memkv/memkv.go" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/memkv/memkv.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/adminproto/admin.pb.go" beforeDir="false" afterPath="$PROJECT_DIR$/rpc/adminproto/admin.pb.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/adminproto/admin_grpc.pb.go" beforeDir="false" afterPath="$PROJECT_DIR$/rpc/adminproto/admin_grpc.pb.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/caproto/server.pb.go" beforeDir="false" afterPath="$PROJECT_DIR$/rpc/caproto/server.pb.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/caproto/server_grpc.pb.go" beforeDir="false" afterPath="$PROJECT_DIR$/rpc/caproto/server_grpc.pb.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libprisma/cryptoutil/encryption/aes_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/cryptoutil/encryption/aes_test.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/server/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/authproviders/integratedprovider/provider.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/authproviders/integratedprovider/provider.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/banner.txt" beforeDir="false" afterPath="$PROJECT_DIR$/server/banner.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/certificate/certificate.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/certificate/certificate.pb.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/certificate/certificate.proto" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/configproviders/tomlprovider/provider.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/configproviders/tomlprovider/provider.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/configproviders/tomlprovider/provider_test.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/server/go.mod" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/server/go.sum" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/init.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/init.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/localkeychain/provider.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/localkeychain/provider.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/providers/configprovider.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/providers/configprovider.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/providers/envprovider.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/providers/envprovider.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/providers/logprovider.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/providers/logprovider.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/serverctl/main.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/servers/caserver.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/servers/caserver.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/localkeychain/sql.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/localkeychain/sql.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -73,7 +33,7 @@
   </component>
   <component name="GOROOT" url="file:///usr/local/go" />
   <component name="Git.Settings">
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/libprisma" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
@@ -88,6 +48,7 @@
   "keyToString": {
     "DefaultGoTemplateProperty": "Go File",
     "Go Build.go build github.com/stateprism/shell_vault/server.executor": "Run",
+    "Go Test.go test github.com/stateprism/libprisma/cryptoutil/encryption.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.go.formatter.settings.were.checked": "true",
     "RunOnceActivity.go.migrated.go.modules.settings": "true",
@@ -116,9 +77,25 @@
       <recent name="$PROJECT_DIR$/server/consts" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Go Test.go test github.com/stateprism/libprisma/cryptoutil/encryption">
+    <configuration name="go test github.com/stateprism/libprisma/cryptoutil/encryption" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="shell_vault" />
+      <working_directory value="$PROJECT_DIR$/libprisma/cryptoutil/encryption" />
+      <root_directory value="$PROJECT_DIR$/libprisma" />
+      <kind value="PACKAGE" />
+      <package value="github.com/stateprism/libprisma/cryptoutil/encryption" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Go Build.go build github.com/stateprism/shell_vault/server" />
+      <item itemvalue="Go Test.go test github.com/stateprism/libprisma/cryptoutil/encryption" />
+    </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Go Test.go test github.com/stateprism/libprisma/cryptoutil/encryption" />
         <item itemvalue="Go Build.go build github.com/stateprism/shell_vault/server" />
       </list>
     </recent_temporary>
@@ -135,7 +112,22 @@
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Code fixes and refactoring plus release process outline" />
+    <option name="LAST_COMMIT_MESSAGE" value="Code fixes and refactoring plus release process outline" />
+  </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/server/localkeychain/provider.go</url>
+          <line>337</line>
+          <option name="timeStamp" value="12" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

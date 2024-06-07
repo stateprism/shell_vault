@@ -69,7 +69,7 @@ func NewLocalKeychain(par LKParams) (providers.KeychainProvider, error) {
 		return nil, fmt.Errorf("path %s is a file, this provider requires a directory", kcPath)
 	}
 
-	db, err := sql.Open("sqlite3", filepath.Join(kcPath, "keys.db"))
+	db, err := sql.Open("sqlite3", filepath.Join(kcPath, "vault.db"))
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +335,7 @@ func (l *LocalKeychain) saveKey(keyName string) {
 }
 
 func (l *LocalKeychain) initDB() error {
-	_, err := l.db.Exec(CreateTables)
+	_, err := l.db.Exec(SetupDB)
 	if err != nil {
 		l.logger.Fatal("failed to create key table", zap.Error(err))
 		return err
