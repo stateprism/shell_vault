@@ -1,30 +1,19 @@
 #!/usr/bin/env bash
 
+
+UPX_FLAGS=("--lzma" "--backup")
+GOOS_LIST=("windows" "linux" "darwin")
+
 make clean
+rm -rf release
+mkdir release
 
-export GOOS=windows
-make
-mkdir rel_windows
-upx bin/*
-mv bin/* rel_windows
+for os in "${GOOS_LIST[@]}"; do
+    echo "Building for $os"
+    GOOS=$os make build
+    mkdir "release_$os"
+    mv bin/* "release_$os"
+    upx "${UPX_FLAGS[@]}" release_$os/*
+done
 
-export GOOS=freebsd
-make
-mkdir rel_freebsd
-upx bin/*
-mv bin/* rel_freebsd
-
-export GOOS=openbsd
-make
-mkdir rel_openbsd
-upx bin/*
-mv bin/* rel_openbsd
-
-export GOOS=linux
-make
-mkdir rel_linux
-upx bin/*
-mv bin/* rel_linux
-
-mkdir rel
-mv rel_* rel
+mv release_* release

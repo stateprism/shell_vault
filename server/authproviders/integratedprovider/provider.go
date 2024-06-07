@@ -27,24 +27,24 @@ import (
 
 type LocalProvider struct {
 	conf         providers.ConfigurationProvider
-	kv           *memkv.MemKV
 	ephemeralKey []byte
 	logger       *zap.Logger
 	db           *sql.DB
-	env          *providers.EnvProvider
 }
 
-func New(config providers.ConfigurationProvider, kv *memkv.MemKV, log *zap.Logger) (providers.AuthProvider, error) {
+func New(config providers.ConfigurationProvider, log *zap.Logger) (providers.AuthProvider, error) {
 	key := kdf.PbKdf2.Key(cryptoutil.NewRandom(128), 4096, 32, sha512.New)
-	localStore := config.GetLocalStore()
-	if localStore == "" {
-		return nil, fmt.Errorf("local store path not found")
+	localStore, err := config.GetString("paths.data")
+	if err != nil {
+		return nil, err
 	}
+
 	dbPath := path.Join(localStore, "users.db")
 	var isDBInit bool
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
 		isDBInit = true
 	}
+
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
@@ -57,10 +57,8 @@ func New(config providers.ConfigurationProvider, kv *memkv.MemKV, log *zap.Logge
 	provider := &LocalProvider{
 		conf:         config,
 		db:           db,
-		kv:           kv,
 		ephemeralKey: key.GetKey(),
 		logger:       log,
-		env:          providers.NewEnvProvider("SHELL_VAULT_"),
 	}
 
 	if isDBInit {
@@ -125,7 +123,6 @@ func (p *LocalProvider) Authenticate(ctx context.Context) (string, error) {
 	sesInfo.Set("session.user.realm", "local")
 	sesInfo.Set("session.id", sesId)
 	sesInfo.Set("session.expires", time.Now().Add(20*time.Hour))
-	p.kv.Set("sessions."+sesId.String(), entInfo)
 	data, err = json.Marshal(sesInfo.GetSerializableMap())
 	if err != nil {
 		return "", status.Error(codes.Internal, "An internal error occurred")
@@ -184,12 +181,10 @@ func (p *LocalProvider) InitNewDB() error {
 	// Add root user
 	root := memkv.NewMemKV(".", nil)
 	// set random root password
-	password := p.env.GetEnvOrDefault("ROOT_PASSWORD", "")
+	password := p.conf.GetStringOrDefault("root_password", "")
 	if password == "" {
 		return errors.New("environment variable ROOT_PASSWORD is not set")
 	}
-	// clear the password from the environment
-	p.env.SetEnv("ROOT_PASSWORD", "")
 	pwKey := kdf.PbKdf2.Key([]byte(password), 4096, 32, sha512.New)
 	root.Set("auth.auth_token", pwKey.String())
 	root.Set("auth.auth_type", "password")
@@ -206,7 +201,7 @@ func (p *LocalProvider) InitNewDB() error {
 }
 
 func (p *LocalProvider) encryptSession(data []byte) ([]byte, error) {
-	secureAes, err := encryption.NewSecureAESWithSafeKey(p.ephemeralKey)
+	secureAes, err := encryption.NewSecureAES(p.ephemeralKey, encryption.AES256)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +215,7 @@ func (p *LocalProvider) encryptSession(data []byte) ([]byte, error) {
 }
 
 func (p *LocalProvider) decryptSession(encrypted []byte) ([]byte, error) {
-	secureAes, err := encryption.NewSecureAESWithSafeKey(p.ephemeralKey)
+	secureAes, err := encryption.NewSecureAES(p.ephemeralKey, encryption.AES256)
 	if err != nil {
 		return nil, err
 	}

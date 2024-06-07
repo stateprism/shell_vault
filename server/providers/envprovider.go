@@ -56,3 +56,14 @@ func (p *EnvProvider) SetEnv(key string, value string) {
 		panic(err)
 	}
 }
+
+func (p *EnvProvider) UnsetEnv(key string) {
+	err := os.Unsetenv(p.prefix + key)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (p *EnvProvider) GetEnvMap() map[string]string {
+	return p.env
+}

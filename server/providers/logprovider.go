@@ -1,6 +1,6 @@
 package providers
 
-type LogLevel int // Log level type
+type LogLevel int // logger level type
 
 const (
 	LOG_LEVEL_DEBUG    LogLevel = iota

@@ -1,10 +1,10 @@
 [general]
 log_level = "info"
-log_file = "stdout"
+log_dir = "{{.Log}}"
 
 [ca_server]
 listen = "0.0.0.0:5000"
-server_id = "test_server"
+server_id = "Shell Vault CA"
 allowed_key_types = [ "ecdsa", "ed25519" ]
 # After this many seconds the server will automatically rotate the certs private key
 # and publish the new key
@@ -13,7 +13,6 @@ root_key_max_ttl = 2592000
 user_cert_ttl = 72000
 
 [providers.local_keychain_provider]
-path = "./certstore"
 fs = "local"
 ttl_tick = 60
 

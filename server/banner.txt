@@ -1,8 +1,7 @@
 Shell Vault
 SSH Access Control System
-Version 1.0.0
+Version %s
 
 For manuals, documentation, and support, visit https://stateprism.com
 
 Copyright (c) %d State Prism, All rights reserved
-

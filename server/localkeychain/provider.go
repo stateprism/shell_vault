@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/spf13/afero"
 	"github.com/stateprism/libprisma/cryptoutil"
 	"github.com/stateprism/libprisma/cryptoutil/encryption"
 	"github.com/stateprism/shell_vault/server/providers"
@@ -25,7 +24,6 @@ import (
 
 // LocalKeychain must implement providers.KeychainProvider
 type LocalKeychain struct {
-	fs           afero.Fs
 	expHook      providers.ExpKeyHook
 	logger       *zap.Logger
 	ticker       *time.Ticker
@@ -33,6 +31,7 @@ type LocalKeychain struct {
 	tickStop     chan struct{}
 	db           *sql.DB
 	eKey         []byte
+	config       providers.ConfigurationProvider
 }
 
 type LKParams struct {
@@ -40,55 +39,28 @@ type LKParams struct {
 	Lc     fx.Lifecycle
 	Config providers.ConfigurationProvider
 	Logger *zap.Logger
-	Env    *providers.EnvProvider
 }
 
 func NewLocalKeychain(par LKParams) (providers.KeychainProvider, error) {
 	// setup key encryption
-	if par.Env.GetEnvOrDefault("KEK", "") == "" {
+	kek := par.Config.GetStringOrDefault("kek", "")
+	if kek == "" {
 		return nil, errors.New("local keychain provider requires a key encryption key")
 	}
-	kek := par.Env.GetEnvOrDefault("KEK", "")
-	// clear the KEK from the environment
-	par.Env.SetEnv("KEK", "")
 
 	// general initialization
-	kcPath, err := par.Config.GetString("providers.local_keychain_provider.path")
-	if err != nil {
-		return nil, err
-	}
-	kcFsType, err := par.Config.GetString("providers.local_keychain_provider.fs")
-	if err != nil {
-		kcFsType = "local"
-	}
-
-	var fs afero.Fs
-	switch kcFsType {
-	case "local", "":
-		fs = afero.NewOsFs()
-		err := os.Chdir(par.Config.GetLocalStore())
-		if err != nil {
-			return nil, err
-		}
-		kcPath, err = filepath.Abs(kcPath)
-	case "memory":
-		fs = afero.NewMemMapFs()
-		_ = fs.MkdirAll(kcPath, 0700)
-	default:
-		return nil, fmt.Errorf("unknown fs type: %s for provider", kcFsType)
-	}
-
+	kcPath, err := par.Config.GetString("paths.data")
 	if err != nil {
 		return nil, err
 	}
 
-	stat, err := fs.Stat(kcPath)
+	stat, err := os.Stat(kcPath)
 	if os.IsNotExist(err) {
-		errDir := fs.MkdirAll(kcPath, 0755)
+		errDir := os.MkdirAll(kcPath, 0755)
 		if errDir != nil {
 			return nil, err
 		}
-		stat, _ = fs.Stat(kcPath)
+		stat, _ = os.Stat(kcPath)
 	} else if err != nil {
 		return nil, err
 	}
@@ -102,9 +74,9 @@ func NewLocalKeychain(par LKParams) (providers.KeychainProvider, error) {
 		return nil, err
 	}
 	lk := &LocalKeychain{
-		fs:     fs,
 		logger: par.Logger,
 		db:     db,
+		config: par.Config,
 		eKey:   cryptoutil.SeededRandomData([]byte(kek), 32),
 	}
 
@@ -264,7 +236,7 @@ func (l *LocalKeychain) MakeNewKey(keyName providers.KeyIdentifier, kt providers
 	}
 
 	providers.NewPrivateKey(keyName, kt, key, time.Duration(ttl))
-	enc, err := encryption.NewSecureAES(l.eKey)
+	enc, err := encryption.NewSecureAES(l.eKey, encryption.AES256)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +278,7 @@ func (l *LocalKeychain) RetrieveKey(kid providers.KeyIdentifier) (*providers.Pri
 	if err != nil {
 		return nil, err
 	}
-	enc, err := encryption.NewSecureAES(l.eKey)
+	enc, err := encryption.NewSecureAES(l.eKey, encryption.AES256)
 	if err != nil {
 		return nil, err
 	}

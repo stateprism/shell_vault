@@ -2,33 +2,39 @@ package tomlprovider
 
 import (
 	"errors"
-	"path"
-	"strings"
-
+	"fmt"
 	"github.com/pelletier/go-toml/v2"
-	"github.com/spf13/afero"
+	"github.com/stateprism/libprisma/memkv"
 	"github.com/stateprism/shell_vault/server/providers"
+	"os"
+	"path"
 )
 
 type TomlConfigProvider struct {
-	keys     map[string]interface{}
+	keys     *memkv.MemKV
 	filename string
 }
 
-func New(fs afero.Fs, filename string) (providers.ConfigurationProvider, error) {
-	stat, err := fs.Stat(filename)
+func New(filename string) (providers.ConfigurationProvider, error) {
+	stat, err := os.Stat(filename)
 	if err != nil {
 		return nil, err
 	}
 
 	data := make([]byte, stat.Size())
 
-	fileHandle, err := fs.Open(filename)
+	fileHandle, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	defer fileHandle.Close()
+	defer func(fileHandle *os.File) {
+		err := fileHandle.Close()
+		if err != nil {
+			fmt.Println("failed to close file")
+			panic(err)
+		}
+	}(fileHandle)
 
 	n, err := fileHandle.Read(data)
 	if err != nil {
@@ -42,8 +48,11 @@ func New(fs afero.Fs, filename string) (providers.ConfigurationProvider, error) 
 		return nil, err
 	}
 
+	store := memkv.NewMemKV(".", &memkv.Opts{CaseInsensitive: false})
+	store.ImportMap(keys)
+
 	return &TomlConfigProvider{
-		keys:     keys,
+		keys:     store,
 		filename: filename,
 	}, nil
 }
@@ -71,26 +80,11 @@ func (p *TomlConfigProvider) GetLocalStore() string {
 }
 
 func (p *TomlConfigProvider) Get(key string) (interface{}, error) {
-	view := p.keys
-	keys := strings.Split(key, ".")
-	if strings.Contains(key, ".") {
-		for i, k := range keys {
-			if i == len(keys)-1 {
-				break
-			}
-			viewTemp, ok := view[k].(map[string]interface{})
-			if !ok {
-				return "", providers.CONFIG_ERROR_INVALID_PATH
-			}
-			view = viewTemp
-		}
-	}
-	key = keys[len(keys)-1]
-	val, ok := view[key]
+	keys, ok := p.keys.Get(key)
 	if !ok {
-		return "", providers.CONFIG_ERROR_INVALID_KEY
+		return nil, fmt.Errorf("key %s not found", key)
 	}
-	return val, nil
+	return keys, nil
 }
 
 func (p *TomlConfigProvider) GetString(key string) (string, error) {
@@ -103,6 +97,18 @@ func (p *TomlConfigProvider) GetString(key string) (string, error) {
 		return "", providers.CONFIG_ERROR_INVALID_VALUE
 	}
 	return valStr, nil
+}
+
+func (p *TomlConfigProvider) GetStringOrDefault(key, def string) string {
+	val, err := p.Get(key)
+	if err != nil {
+		return def
+	}
+	valStr, ok := val.(string)
+	if !ok {
+		return def
+	}
+	return valStr
 }
 
 func (p *TomlConfigProvider) GetInt(key string) (int, error) {
@@ -154,16 +160,12 @@ func (p *TomlConfigProvider) GetBool(key string) (bool, error) {
 }
 
 func (p *TomlConfigProvider) HasKey(key string) bool {
-	if _, err := p.Get(key); err != nil {
-		return false
-	}
-	return true
+	return p.keys.Contains(key)
 }
 
 func (p *TomlConfigProvider) Set(key string, value interface{}) error {
-	err := p.Set(key, value)
-	if err != nil {
-		return err
+	if !p.keys.Set(key, value) {
+		return fmt.Errorf("failed to set %s", key)
 	}
 	return nil
 }

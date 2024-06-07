@@ -6,14 +6,11 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
-	"github.com/spf13/afero"
-	"github.com/stateprism/libprisma/memkv"
 	"github.com/stateprism/shell_vault/server/authproviders/integratedprovider"
 	"github.com/stateprism/shell_vault/server/configproviders/tomlprovider"
 	"github.com/stateprism/shell_vault/server/middleware"
 	"github.com/stateprism/shell_vault/server/providers"
 	"github.com/stateprism/shell_vault/server/servers"
-	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -21,18 +18,105 @@ import (
 	"net"
 	"os"
 	"path"
-	"path/filepath"
 	"slices"
+	"strings"
 )
+
+type RunMode string
+
+type KeyPaths struct {
+	Root   string
+	Config string
+	Data   string
+	Log    string
+}
 
 type BootStrapResult struct {
 	fx.Out
+
 	Config providers.ConfigurationProvider
 	Auth   providers.AuthProvider
 	Logger *zap.Logger
-	Env    *providers.EnvProvider
-	REnv   RunEnv
-	MemKV  *memkv.MemKV
+	Mode   RunMode
+}
+
+type ProvideFlagsOut struct {
+	fx.Out
+
+	Paths         KeyPaths
+	CleanLocalDbs bool
+	Env           *providers.EnvProvider
+}
+
+type BootstrapParams struct {
+	fx.In
+
+	Paths         KeyPaths
+	CleanLocalDbs bool
+	Env           *providers.EnvProvider
+}
+
+// Bootstrap is a function that initializes the server with a few configurations and other dependencies
+func Bootstrap(p BootstrapParams) (BootStrapResult, error) {
+	empty := BootStrapResult{}
+	configProvider, err := NewConfig(p.Paths.Config)
+	if err != nil {
+		return empty, err
+	}
+
+	// Set the environment variables to the configuration provider
+	for k, v := range p.Env.GetEnvMap() {
+		k = strings.ToLower(k)
+		k = strings.TrimPrefix(k, "shell_vault_")
+		err := configProvider.Set(k, v)
+		if err != nil {
+			return empty, err
+		}
+		p.Env.UnsetEnv(k)
+	}
+
+	// Set the key paths to the configuration provider
+	_ = configProvider.Set("paths.config", p.Paths.Config)
+	_ = configProvider.Set("paths.data", p.Paths.Data)
+	_ = configProvider.Set("paths.log", p.Paths.Log)
+
+	var logger *zap.Logger
+	runMode := p.Env.GetEnvOrDefault("ENV", "PROD")
+	if runMode == "DEV" || runMode == "MAINTENANCE" {
+		l, _ := zap.NewDevelopment()
+		logger = l
+	} else {
+		l, _ := zap.NewProduction()
+		logger = l
+	}
+
+	logger.Info("Starting server in", zap.String("env", string(runMode)))
+	logger.Info("Config path", zap.String("path", p.Paths.Config))
+
+	if (runMode == "DEV" || runMode == "MAINTENANCE") && p.CleanLocalDbs {
+		logger.Info("Cleaning local databases")
+		localStore := configProvider.GetLocalStore()
+		dbPath := path.Join(localStore, "users.db")
+		if err := os.Remove(dbPath); err != nil {
+			logger.Error("Failed to remove db", zap.String("path", dbPath), zap.Error(err))
+		}
+	} else if p.CleanLocalDbs && runMode != "DEV" {
+		logger.Fatal("clean-local-dbs can only be used in DEV or MAINTENANCE modes")
+	}
+
+	authProvider, err := NewAuthProvider(configProvider, logger)
+	if err != nil {
+		return empty, err
+	}
+
+	configParams := BootStrapResult{
+		Config: configProvider,
+		Logger: logger,
+		Mode:   RunMode(runMode),
+		Auth:   authProvider,
+	}
+
+	return configParams, nil
 }
 
 type GrpcServerParams struct {
@@ -42,14 +126,13 @@ type GrpcServerParams struct {
 	Log         *zap.Logger
 	CaServer    *servers.CaServer
 	AdminServer *servers.AdminServer
-	REnv        RunEnv
+	Auth        providers.AuthProvider
+	RunMode     RunMode
 }
 
 func NewConfig(configPath string) (providers.ConfigurationProvider, error) {
 	var config providers.ConfigurationProvider
-	fs := afero.NewOsFs()
-	p, _ := filepath.Abs(path.Join(configPath, "config.toml"))
-	configTemp, err := tomlprovider.New(fs, p)
+	configTemp, err := tomlprovider.New(path.Join(configPath, "config.toml"))
 	if err != nil {
 		return nil, fmt.Errorf("error setting up config provider with %s: %s", configPath, err)
 	}
@@ -62,7 +145,7 @@ func GrpcListen(p GrpcServerParams) []*grpc.Server {
 	aS := grpc.NewServer()
 	cS := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			selector.UnaryServerInterceptor(middleware.UnaryServerInterceptor(p.CaServer.Auth.GetSession), selector.MatchFunc(skipAuthService)),
+			selector.UnaryServerInterceptor(middleware.UnaryServerInterceptor(p.Auth.GetSession), selector.MatchFunc(skipAuthService)),
 			recovery.UnaryServerInterceptor(),
 		),
 	)
@@ -80,7 +163,7 @@ func GrpcListen(p GrpcServerParams) []*grpc.Server {
 
 			p.CaServer.RegisterServer(cS)
 			p.AdminServer.RegisterServer(aS)
-			if p.REnv == "DEV" {
+			if p.RunMode == "DEV" {
 				p.Log.Debug("Starting server in debug mode with reflection")
 				reflection.Register(cS)
 				reflection.Register(aS)
@@ -111,7 +194,7 @@ func skipAuthService(_ context.Context, c interceptors.CallMeta) bool {
 	return !slices.Contains(exemptList, c.FullMethod())
 }
 
-func NewAuthProvider(config providers.ConfigurationProvider, logger *zap.Logger, kv *memkv.MemKV) (providers.AuthProvider, error) {
+func NewAuthProvider(config providers.ConfigurationProvider, logger *zap.Logger) (providers.AuthProvider, error) {
 	providerName, err := config.GetString("providers.auth_provider.realm")
 	if err != nil {
 		return nil, err
@@ -119,84 +202,8 @@ func NewAuthProvider(config providers.ConfigurationProvider, logger *zap.Logger,
 	switch providerName {
 	case "local":
 		logger.Info("Setup authentication with local provider")
-		return integratedprovider.New(config, kv, logger)
+		return integratedprovider.New(config, logger)
 	default:
 		return nil, fmt.Errorf("unknown auth provider")
 	}
-}
-
-func Bootstrap() (BootStrapResult, error) {
-	configParams := BootStrapResult{}
-	app := &cli.App{
-		Name:  "shell_vault",
-		Usage: "Prisma Certificate Authority",
-		Flags: []cli.Flag{
-			&cli.PathFlag{
-				Name:     "config",
-				Required: true,
-				Usage:    "Path to the configuration dir",
-				Aliases:  []string{"c"},
-			},
-			&cli.BoolFlag{
-				Name:  "clean-local-dbs",
-				Usage: "Clean local databases, this will reset all the user databases, needs env SHELL_VAULT_ENV=DEV",
-			},
-		},
-		Action: func(c *cli.Context) error {
-			configPath := c.String("config")
-			configProvider, err := NewConfig(configPath)
-			if err != nil {
-				return err
-			}
-			envProvider := providers.NewEnvProvider("SHELL_VAULT_")
-			memKV := memkv.NewMemKV(".", &memkv.Opts{CaseInsensitive: true})
-
-			var logger *zap.Logger
-			var rEnv RunEnv
-			if envProvider.GetEnvOrDefault("ENV", "PROD") == "DEV" {
-				l, _ := zap.NewDevelopment()
-				rEnv = "DEV"
-				logger = l
-			} else {
-				l, _ := zap.NewProduction()
-				rEnv = "PROD"
-				logger = l
-			}
-
-			if rEnv == "DEV" && c.Bool("clean-local-dbs") {
-				logger.Info("Cleaning local databases")
-				localStore := configProvider.GetLocalStore()
-				dbPath := path.Join(localStore, "users.db")
-				if err := os.Remove(dbPath); err != nil {
-					logger.Error("Failed to remove db", zap.String("path", dbPath), zap.Error(err))
-				}
-			} else if c.Bool("clean-local-dbs") && rEnv != "DEV" {
-				return fmt.Errorf("clean-local-dbs can only be used in DEV mode current mode is: %s", rEnv)
-			}
-
-			authProvider, err := NewAuthProvider(configProvider, logger, memKV)
-			if err != nil {
-				return err
-			}
-
-			configParams = BootStrapResult{
-				Config: configProvider,
-				Env:    envProvider,
-				Logger: logger,
-				REnv:   rEnv,
-				Auth:   authProvider,
-				MemKV:  memKV,
-			}
-
-			return nil
-		},
-	}
-
-	err := app.Run(os.Args)
-	if err != nil {
-		fmt.Println(err)
-		return BootStrapResult{}, err
-	}
-
-	return configParams, nil
 }

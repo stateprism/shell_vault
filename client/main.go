@@ -15,6 +15,10 @@ import (
 	"time"
 )
 
+var Version string
+var CommitInfo string
+var BuildDate string
+
 func main() {
 	app := &cli.App{
 		Name:  "Prisma CA Client",
@@ -28,6 +32,13 @@ func main() {
 			},
 		},
 		Commands: []*cli.Command{
+			{
+				Name: "version",
+				Action: func(c *cli.Context) error {
+					fmt.Printf("Version: %s\nCommit: %s\nBuild Date: %s\n", Version, CommitInfo, BuildDate)
+					return nil
+				},
+			},
 			{
 				Name: "get-ca-cert",
 				Action: func(c *cli.Context) error {

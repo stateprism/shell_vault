@@ -22,15 +22,12 @@ import (
 
 type CaServer struct {
 	pb.UnsafePrismaCaServer
-	Config      providers.ConfigurationProvider
-	Auth        providers.AuthProvider
-	DB          providers.DatabaseProvider
-	KProvider   providers.KeychainProvider
-	AllowedKT   []providers.KeyType
-	Env         *providers.EnvProvider
-	Log         *zap.Logger
+	config      providers.ConfigurationProvider
+	authPro     providers.AuthProvider
+	vault       providers.KeychainProvider
+	allowedKT   []providers.KeyType
+	logger      *zap.Logger
 	Listen      string
-	MemKV       *memkv.MemKV
 	rootTtl     int64
 	rootKt      providers.KeyType
 	userCertTtl uint64
@@ -44,47 +41,45 @@ type CaServerParams struct {
 	Auth      providers.AuthProvider
 	Env       *providers.EnvProvider
 	KProvider providers.KeychainProvider
-	MemKV     *memkv.MemKV
 }
 
 func NewCAServer(p CaServerParams) (*CaServer, error) {
 	s := &CaServer{
-		Config:    p.Config,
-		Auth:      p.Auth,
-		Log:       p.Logger,
-		KProvider: p.KProvider,
-		MemKV:     p.MemKV,
+		config:  p.Config,
+		authPro: p.Auth,
+		logger:  p.Logger,
+		vault:   p.KProvider,
 	}
-	if s.Config == nil {
+	if s.config == nil {
 		return nil, fmt.Errorf("config is nil")
 	}
-	akt, err := s.Config.Get("ca_server.allowed_key_types")
+	akt, err := s.config.Get("ca_server.allowed_key_types")
 	if err != nil {
 		return nil, err
 	}
 	kt, _ := akt.([]interface{})
-	s.AllowedKT, _, _ = providers.KTStringArrayToKTArray(lib.InterfaceArrayToArray[string](kt))
-	s.Listen, err = s.Config.GetString("ca_server.listen")
+	s.allowedKT, _, _ = providers.KTStringArrayToKTArray(lib.InterfaceArrayToArray[string](kt))
+	s.Listen, err = s.config.GetString("ca_server.listen")
 	if err != nil {
 		return nil, err
 	}
 
-	if s.Auth == nil {
+	if s.authPro == nil {
 		return nil, fmt.Errorf("auth is nil")
 	}
 	// TODO: Handle these possible errors
-	rKts, _ := s.Config.GetString("ca_server.root_key_type")
-	rktTtl, _ := s.Config.GetInt64("ca_server.root_key_max_ttl")
-	userCertTtl, _ := s.Config.GetInt64("ca_server.user_cert_ttl")
+	rKts, _ := s.config.GetString("ca_server.root_key_type")
+	rktTtl, _ := s.config.GetInt64("ca_server.root_key_max_ttl")
+	userCertTtl, _ := s.config.GetInt64("ca_server.user_cert_ttl")
 	s.rootKt = providers.KTFromString(rKts)
 	s.rootTtl = rktTtl
 	s.userCertTtl = uint64(userCertTtl)
 
-	s.KProvider.SetExpKeyHook(s.expKeyHook)
+	s.vault.SetExpKeyHook(s.expKeyHook)
 
 	p.LC.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			s.Log.Info("Checking for root key rotation necessity on startup")
+			s.logger.Info("Checking for root key rotation necessity on startup")
 			if err := s.rotateRootKey(); err != nil {
 				return err
 			}
@@ -99,7 +94,7 @@ func NewCAServer(p CaServerParams) (*CaServer, error) {
 }
 
 func (s *CaServer) Authenticate(ctx context.Context, _ *pb.EmptyMsg) (*pb.AuthReply, error) {
-	ent, err := s.Auth.Authenticate(ctx)
+	ent, err := s.authPro.Authenticate(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -113,14 +108,14 @@ func (s *CaServer) Authenticate(ctx context.Context, _ *pb.EmptyMsg) (*pb.AuthRe
 }
 
 func (s *CaServer) GetCurrentKey(ctx context.Context, _ *pb.EmptyMsg) (*pb.CertReply, error) {
-	pko, err := s.KProvider.RetrieveKey("rootKey")
+	pko, err := s.vault.RetrieveKey("rootKey")
 	if err != nil {
-		s.Log.Fatal("Root key not found", zap.Error(err))
+		s.logger.Fatal("Root key not found", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Internal error")
 	}
 	pk, err := ssh.NewPublicKey(pko.GetPublicKey())
 	if err != nil {
-		s.Log.Fatal("Error getting public key", zap.Error(err))
+		s.logger.Fatal("Error getting public key", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Internal error")
 	}
 
@@ -133,15 +128,15 @@ func (s *CaServer) GetCurrentKey(ctx context.Context, _ *pb.EmptyMsg) (*pb.CertR
 }
 
 func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.CertReply, error) {
-	pko, err := s.KProvider.RetrieveKey("rootKey")
+	pko, err := s.vault.RetrieveKey("rootKey")
 	if err != nil {
-		s.Log.Fatal("Root key not found", zap.Error(err))
+		s.logger.Fatal("Root key not found", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Internal error")
 	}
 	pkr := pko.UnwrapKey()
 	signer, err := ssh.NewSignerFromKey(pkr)
 	if err != nil {
-		s.Log.Fatal("Error creating signer", zap.Error(err))
+		s.logger.Fatal("Error creating signer", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Internal error")
 	}
 	session := ctx.Value("session").(*memkv.MemKV)
@@ -170,7 +165,7 @@ func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.Ce
 	}
 	err = cert.SignCert(cryptorand.Reader, signer)
 	if err != nil {
-		s.Log.Error("Error signing cert", zap.Error(err))
+		s.logger.Error("Error signing cert", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Internal error")
 	}
 	return &pb.CertReply{
@@ -180,16 +175,16 @@ func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.Ce
 }
 
 func (s *CaServer) GetConfig(context.Context, *pb.ConfigRequest) (*pb.ConfigReply, error) {
-	serverId, _ := s.Config.GetString("server_id")
+	serverId, _ := s.config.GetString("server_id")
 	if serverId == "" {
 		serverId = "prisma-ca"
 	}
 	policy := pb.NewEmptyExtensions()
 	policy.SetExtensionsRoot()
-	ktArr := lib.ArrayToInterfaceArray(providers.KTArrayToKTStringArray(s.AllowedKT))
+	ktArr := lib.ArrayToInterfaceArray(providers.KTArrayToKTStringArray(s.allowedKT))
 	policyData, err := pb.MakeNewExtension(ktArr)
 	if err != nil {
-		s.Log.Fatal("Error creating policy extension")
+		s.logger.Fatal("Error creating policy extension")
 	}
 	policy.Set("allowed_key_types", policyData)
 	return &pb.ConfigReply{
@@ -209,27 +204,27 @@ func (s *CaServer) RegisterServer(srv *grpc.Server) {
 }
 
 func (s *CaServer) rotateRootKey() error {
-	key, err := s.KProvider.RetrieveKey("rootKey")
+	key, err := s.vault.RetrieveKey("rootKey")
 	if err != nil && err.Error() != "sql: no rows in result set" {
 		return err
 	}
 	if err != nil && err.Error() == "sql: no rows in result set" {
-		s.Log.Info("Root key not found, creating new key")
-		_, err := s.KProvider.MakeAndReplaceKey("rootKey", s.rootKt, s.rootTtl)
+		s.logger.Info("Root key not found, creating new key")
+		_, err := s.vault.MakeAndReplaceKey("rootKey", s.rootKt, s.rootTtl)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
 	if time.Now().Unix() > time.Now().Add(key.GetTtl()).Unix() {
-		s.Log.Info("Rotating root key")
-		_, err := s.KProvider.MakeAndReplaceKey("rootKey", s.rootKt, s.rootTtl)
+		s.logger.Info("Rotating root key")
+		_, err := s.vault.MakeAndReplaceKey("rootKey", s.rootKt, s.rootTtl)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
-	s.Log.Info("Root key does not need to be rotated")
+	s.logger.Info("Root key does not need to be rotated")
 	return nil
 }
 

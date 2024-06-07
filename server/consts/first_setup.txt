@@ -1,0 +1,4 @@
+The first time setup is now completed, you can now go to %s and edit the config.toml and server.env files to your liking.
+
+In order to start the server, you can run the following command:
+%s/server -run

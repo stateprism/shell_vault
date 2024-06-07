@@ -31,6 +31,7 @@ type ConfigurationProvider interface {
 	GetLocalStore() string
 	HasKey(key string) bool
 	GetString(key string) (string, error)
+	GetStringOrDefault(key, def string) string
 	GetInt(key string) (int, error)
 	GetInt64(key string) (int64, error)
 	GetBytes(key string) ([]byte, error)
