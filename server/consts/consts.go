@@ -11,7 +11,6 @@ var ServerEnv string
 const UNIXEtcFolder = "/etc/shell_vault"
 const UNIXVarFolder = "/var/lib/shell_vault"
 const UNIXVarLogFolder = "/var/log/shell_vault"
-const UNIXVarRunFolder = "/var/run/shell_vault"
 
 const WindowsEtcFolder = "C:\\ProgramData\\ShellVault"
 const WindowsVarFolder = "C:\\ProgramData\\ShellVault"

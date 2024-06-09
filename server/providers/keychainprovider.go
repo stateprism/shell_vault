@@ -3,9 +3,9 @@ package providers
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/ed25519"
 	"crypto/rsa"
 	"errors"
+	"golang.org/x/crypto/ed25519"
 	"strings"
 	"time"
 

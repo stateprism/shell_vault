@@ -10,6 +10,7 @@ replace (
 require (
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0
+	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/pelletier/go-toml/v2 v2.2.2
 	github.com/stateprism/libprisma v0.0.0-00010101000000-000000000000

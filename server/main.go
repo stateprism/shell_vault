@@ -4,10 +4,11 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"github.com/joho/godotenv"
 	"github.com/stateprism/shell_vault/server/consts"
 	"github.com/stateprism/shell_vault/server/localkeychain"
 	"github.com/stateprism/shell_vault/server/providers"
-	"github.com/stateprism/shell_vault/server/servers"
+	"github.com/stateprism/shell_vault/server/services"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -73,8 +74,8 @@ func main() {
 			fx.Provide(
 				ProvideFlags,
 				Bootstrap,
-				servers.NewCAServer,
-				servers.NewAdminServer,
+				services.NewCAServer,
+				services.NewAdminServer,
 				localkeychain.NewLocalKeychain,
 				GrpcListen,
 			),
@@ -111,14 +112,14 @@ func setupAndProvidePaths() KeyPaths {
 			dataPath = consts.UNIXVarFolder[1:]
 			logPath = consts.UNIXVarLogFolder[1:]
 		}
+	}
 
-		toCreate := []string{configPath, dataPath, logPath}
-		for _, p := range toCreate {
-			err := os.MkdirAll(p, 0755)
-			if err != nil {
-				fmt.Println("Failed to create path:", p)
-				os.Exit(1)
-			}
+	toCreate := []string{configPath, dataPath, logPath}
+	for _, p := range toCreate {
+		err := os.MkdirAll(p, 0755)
+		if err != nil {
+			fmt.Println("Failed to create path:", p)
+			os.Exit(1)
 		}
 	}
 
@@ -131,10 +132,16 @@ func setupAndProvidePaths() KeyPaths {
 }
 
 func ProvideFlags() ProvideFlagsOut {
+	paths := setupAndProvidePaths()
+	err := godotenv.Load(path.Join(paths.Config, "server.env"))
+	if err != nil {
+		fmt.Println("Did not load env from server.env")
+	}
+
 	envProvider := providers.NewEnvProvider("SHELL_VAULT_")
 
 	return ProvideFlagsOut{
-		Paths:         setupAndProvidePaths(),
+		Paths:         paths,
 		CleanLocalDbs: cleanLocalDBs,
 		Env:           envProvider,
 	}
@@ -152,9 +159,9 @@ func firstSetup() {
 		fmt.Println("Failed to parse configuration template, contact support")
 		os.Exit(1)
 	}
-	fd, err := os.OpenFile(configFile, os.O_WRONLY|os.O_CREATE, 0644)
+	fd, err := os.OpenFile(configFile, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		fmt.Println("Failed to create configuration file")
+		fmt.Println("Failed to create configuration file", configFile, err)
 		os.Exit(1)
 	}
 
@@ -168,9 +175,15 @@ func firstSetup() {
 	envFile := path.Join(paths.Config, consts.DefaultServerEnvFile)
 	err = os.WriteFile(envFile, []byte(consts.ServerEnv), 0600)
 	if err != nil {
-		fmt.Println("Failed to create environment file")
+		fmt.Println("Failed to create environment file", envFile)
 		os.Exit(1)
 	}
+
+	fmt.Println(
+		fmt.Sprintf(
+			"Setup is now completed, check %s, for the configuration files and make any changes to your liking.",
+			paths.Config,
+		))
 
 	fmt.Println()
 }

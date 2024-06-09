@@ -24,4 +24,3 @@ allowed_groups=["*"]
 
 [admin_server]
 listen = "localhost:8000"
-root_key = "AAAAC3NzaC1lZDI1NTE5AAAAIAhOhkaucaaXC18WrhZUti7mZP4466MqPjXSDukCUBPk"

@@ -10,7 +10,7 @@ import (
 	"github.com/stateprism/shell_vault/server/configproviders/tomlprovider"
 	"github.com/stateprism/shell_vault/server/middleware"
 	"github.com/stateprism/shell_vault/server/providers"
-	"github.com/stateprism/shell_vault/server/servers"
+	"github.com/stateprism/shell_vault/server/services"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -64,6 +64,11 @@ func Bootstrap(p BootstrapParams) (BootStrapResult, error) {
 		return empty, err
 	}
 
+	// Set the key paths to the configuration provider
+	_ = configProvider.Set("paths.config", p.Paths.Config)
+	_ = configProvider.Set("paths.data", p.Paths.Data)
+	_ = configProvider.Set("paths.log", p.Paths.Log)
+
 	// Set the environment variables to the configuration provider
 	for k, v := range p.Env.GetEnvMap() {
 		k = strings.ToLower(k)
@@ -74,11 +79,6 @@ func Bootstrap(p BootstrapParams) (BootStrapResult, error) {
 		}
 		p.Env.UnsetEnv(k)
 	}
-
-	// Set the key paths to the configuration provider
-	_ = configProvider.Set("paths.config", p.Paths.Config)
-	_ = configProvider.Set("paths.data", p.Paths.Data)
-	_ = configProvider.Set("paths.log", p.Paths.Log)
 
 	var logger *zap.Logger
 	runMode := p.Env.GetEnvOrDefault("ENV", "PROD")
@@ -124,8 +124,8 @@ type GrpcServerParams struct {
 	Lc          fx.Lifecycle
 	Config      providers.ConfigurationProvider
 	Log         *zap.Logger
-	CaServer    *servers.CaServer
-	AdminServer *servers.AdminServer
+	CaServer    *services.CaServer
+	AdminServer *services.AdminServer
 	Auth        providers.AuthProvider
 	RunMode     RunMode
 }

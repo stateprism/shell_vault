@@ -1,10 +1,10 @@
-package servers
+package services
 
 import (
 	"context"
-	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
+	"golang.org/x/crypto/ed25519"
 	"sync"
 	"time"
 
