@@ -87,6 +87,20 @@ func (p *TomlConfigProvider) Get(key string) (interface{}, error) {
 	return keys, nil
 }
 
+func (p *TomlConfigProvider) GetMany(keys ...string) ([]interface{}, error) {
+	ret := make([]interface{}, len(keys))
+
+	for i, key := range keys {
+		val, err := p.Get(key)
+		if err != nil {
+			return nil, nil
+		}
+		valStr := val
+		ret[i] = valStr
+	}
+	return ret, nil
+}
+
 func (p *TomlConfigProvider) GetString(key string) (string, error) {
 	val, err := p.Get(key)
 	if err != nil {
@@ -97,6 +111,23 @@ func (p *TomlConfigProvider) GetString(key string) (string, error) {
 		return "", providers.CONFIG_ERROR_INVALID_VALUE
 	}
 	return valStr, nil
+}
+
+func (p *TomlConfigProvider) GetStrings(keys ...string) ([]string, error) {
+	ret := make([]string, len(keys))
+
+	for i, key := range keys {
+		val, err := p.Get(key)
+		if err != nil {
+			return nil, nil
+		}
+		valStr, ok := val.(string)
+		if !ok {
+			return nil, providers.CONFIG_ERROR_INVALID_VALUE
+		}
+		ret[i] = valStr
+	}
+	return ret, nil
 }
 
 func (p *TomlConfigProvider) GetStringOrDefault(key, def string) string {

@@ -20,6 +20,10 @@ require (
 )
 
 require (
+	github.com/BurntSushi/toml v1.4.0 // indirect
+	github.com/expr-lang/expr v1.16.9 // indirect
+	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
+	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.uber.org/dig v1.17.1 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 )

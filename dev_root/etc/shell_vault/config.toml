@@ -11,6 +11,12 @@ allowed_key_types = [ "ecdsa", "ed25519" ]
 root_key_type = "ed25519"
 root_key_max_ttl = 2592000
 user_cert_ttl = 72000
+auth_session_ttl = 72000
+
+[ca_server.authorizers]
+allowed_plugins = ["allowall.expr"]
+request_user_certificate = "allowall"
+request_host_certificate = "allowall"
 
 [providers.local_keychain_provider]
 path = "./certstore"
@@ -26,3 +32,4 @@ allowed_groups=["*"]
 [admin_server]
 listen = "localhost:8000"
 root_key = "AAAAC3NzaC1lZDI1NTE5AAAAIAhOhkaucaaXC18WrhZUti7mZP4466MqPjXSDukCUBPk"
+auth_session_ttl = 3600

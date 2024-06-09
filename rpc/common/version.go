@@ -1,4 +1,4 @@
-package caproto
+package common
 
 import "fmt"
 

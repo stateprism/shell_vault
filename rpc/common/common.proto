@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+option go_package = "github.com/stateprism/shell_vault/rpc/common";
+
+message Empty {}
+
+enum ExtensionType {
+  EMPTY = 0;
+  STRING = 1;
+  INTEGER = 2;
+  BOOLEAN = 3;
+  BYTES = 4;
+  EXTENSION = 5;
+  ARRAY = 6;
+}
+
+message ExtensionArray {repeated Extension values = 1;}
+
+message Extensions {
+  map<string, Extension> extensions = 1;
+  bool is_empty = 2;
+}
+
+message Extension {
+  ExtensionType type = 1;
+  optional string string_value = 2;
+  optional int64 integer_value = 3;
+  optional bool boolean_value = 4;
+  optional bytes bytes_value = 5;
+  optional Extensions extension_value = 6;
+  optional ExtensionArray array_value = 7;
+}
+
+message Version {
+  uint32 major = 1;
+  uint32 minor = 2;
+  uint32 patch = 3;
+}
+
+message AuthReply {
+  // The time at which the authentication was performed
+  int64 auth_time = 1;
+  // The time at which the authentication expires, or 0 if failure
+  int64 auth_until = 2;
+  // The authentication token to be used for further requests
+  string auth_token = 3;
+  // Whether the authentication was successful
+  bool success = 4;
+}

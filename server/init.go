@@ -8,13 +8,16 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
 	"github.com/stateprism/shell_vault/server/authproviders/integratedprovider"
 	"github.com/stateprism/shell_vault/server/configproviders/tomlprovider"
-	"github.com/stateprism/shell_vault/server/middleware"
+	"github.com/stateprism/shell_vault/server/middleware/auth"
+	"github.com/stateprism/shell_vault/server/plugins"
 	"github.com/stateprism/shell_vault/server/providers"
 	"github.com/stateprism/shell_vault/server/services"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 	"net"
 	"os"
 	"path"
@@ -91,7 +94,7 @@ func Bootstrap(p BootstrapParams) (BootStrapResult, error) {
 	}
 
 	logger.Info("Starting server in", zap.String("env", string(runMode)))
-	logger.Info("Config path", zap.String("path", p.Paths.Config))
+	logger.Info("config path", zap.String("path", p.Paths.Config))
 
 	if (runMode == "DEV" || runMode == "MAINTENANCE") && p.CleanLocalDbs {
 		logger.Info("Cleaning local databases")
@@ -104,7 +107,15 @@ func Bootstrap(p BootstrapParams) (BootStrapResult, error) {
 		logger.Fatal("clean-local-dbs can only be used in DEV or MAINTENANCE modes")
 	}
 
-	authProvider, err := NewAuthProvider(configProvider, logger)
+	plugs, err := plugins.NewProvider(plugins.ProviderParams{
+		Config: configProvider,
+		Logger: logger,
+	})
+	if err != nil {
+		return empty, err
+	}
+
+	authProvider, err := NewAuthProvider(plugs, configProvider, logger)
 	if err != nil {
 		return empty, err
 	}
@@ -143,12 +154,21 @@ func NewConfig(configPath string) (providers.ConfigurationProvider, error) {
 func GrpcListen(p GrpcServerParams) []*grpc.Server {
 	s := make([]*grpc.Server, 0)
 	aS := grpc.NewServer()
-	cS := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(
-			selector.UnaryServerInterceptor(middleware.UnaryServerInterceptor(p.Auth.GetSession), selector.MatchFunc(skipAuthService)),
-			recovery.UnaryServerInterceptor(),
-		),
-	)
+	var cS *grpc.Server
+	if p.RunMode == "DEV" {
+		cS = grpc.NewServer(
+			grpc.ChainUnaryInterceptor(
+				selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(p.Auth.Authorize), selector.MatchFunc(skipAuthService)),
+			),
+		)
+	} else {
+		cS = grpc.NewServer(
+			grpc.ChainUnaryInterceptor(
+				selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(p.Auth.Authorize), selector.MatchFunc(skipAuthService)),
+				recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(recoverPanic)),
+			),
+		)
+	}
 
 	p.Lc.Append(fx.Hook{
 		OnStart: func(context.Context) error {
@@ -186,15 +206,19 @@ func GrpcListen(p GrpcServerParams) []*grpc.Server {
 	return s
 }
 
+func recoverPanic(p any) (err error) {
+	return status.Error(codes.Internal, "Internal server error")
+}
+
 func skipAuthService(_ context.Context, c interceptors.CallMeta) bool {
 	exemptList := []string{
-		"/PrismaCa/Authenticate",
-		"/PrismaCa/GetCurrentKey",
+		"/CertificateAuthority/Authenticate",
+		"/CertificateAuthority/GetCurrentKey",
 	}
 	return !slices.Contains(exemptList, c.FullMethod())
 }
 
-func NewAuthProvider(config providers.ConfigurationProvider, logger *zap.Logger) (providers.AuthProvider, error) {
+func NewAuthProvider(plugins *plugins.Provider, config providers.ConfigurationProvider, logger *zap.Logger) (providers.AuthProvider, error) {
 	providerName, err := config.GetString("providers.auth_provider.realm")
 	if err != nil {
 		return nil, err
@@ -202,7 +226,7 @@ func NewAuthProvider(config providers.ConfigurationProvider, logger *zap.Logger)
 	switch providerName {
 	case "local":
 		logger.Info("Setup authentication with local provider")
-		return integratedprovider.New(config, logger)
+		return integratedprovider.New(plugins, config, logger)
 	default:
 		return nil, fmt.Errorf("unknown auth provider")
 	}

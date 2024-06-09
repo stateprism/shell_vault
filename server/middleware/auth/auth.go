@@ -1,7 +1,7 @@
 // Copyright (c) The go-grpc-middleware Authors.
 // Licensed under the Apache License 2.0.
 
-package middleware
+package auth
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 // If error is returned, its `grpc.Code()` will be returned to the user as well as the verbatim message.
 // Please make sure you use `codes.Unauthenticated` (lacking auth) and `codes.PermissionDenied`
 // (authed, but lacking perms) appropriately.
-type AuthFn func(ctx context.Context) (context.Context, error)
+type AuthFn func(ctx context.Context, method string) (context.Context, error)
 
 // ServiceAuthFuncOverride allows a given gRPC service implementation to override the global `AuthFunc`.
 //
@@ -42,7 +42,7 @@ func UnaryServerInterceptor(f AuthFn) grpc.UnaryServerInterceptor {
 		if overrideSrv, ok := info.Server.(ServiceAuthFuncOverride); ok {
 			newCtx, err = overrideSrv.AuthFuncOverride(ctx, info.FullMethod)
 		} else {
-			newCtx, err = f(ctx)
+			newCtx, err = f(ctx, info.FullMethod)
 		}
 		if err != nil {
 			return nil, err
@@ -51,7 +51,7 @@ func UnaryServerInterceptor(f AuthFn) grpc.UnaryServerInterceptor {
 	}
 }
 
-func AuthFromMetadata(ctx context.Context, expectedScheme string, header string) (string, error) {
+func Metadata(ctx context.Context, expectedScheme string, header string) (string, error) {
 	headerVal := metadata.ExtractIncoming(ctx).Get(header)
 	if headerVal == "" {
 		return "", status.Error(codes.Unauthenticated, "Request is not authenticated properly")

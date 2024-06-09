@@ -2,15 +2,19 @@ package providers
 
 import (
 	"context"
-	"github.com/stateprism/libprisma/memkv"
+	"github.com/google/uuid"
 )
 
-type EntityInfo struct {
-	*memkv.MemKV
+type SessionInfo struct {
+	Principal string
+	ValidTo   int64
+	Realm     string
+	Id        uuid.UUID
+	Deadline  int64
 }
 
 type AuthProvider interface {
 	String() string
 	Authenticate(ctx context.Context) (string, error)
-	GetSession(ctx context.Context) (context.Context, error)
+	Authorize(ctx context.Context, method string) (context.Context, error)
 }

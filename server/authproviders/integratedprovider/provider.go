@@ -15,8 +15,10 @@ import (
 	"github.com/stateprism/libprisma/cryptoutil/encryption"
 	"github.com/stateprism/libprisma/cryptoutil/kdf"
 	"github.com/stateprism/libprisma/memkv"
-	"github.com/stateprism/shell_vault/server/middleware"
+	"github.com/stateprism/shell_vault/server/middleware/auth"
+	"github.com/stateprism/shell_vault/server/plugins"
 	"github.com/stateprism/shell_vault/server/providers"
+	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -30,9 +32,10 @@ type LocalProvider struct {
 	ephemeralKey []byte
 	logger       *zap.Logger
 	db           *sql.DB
+	plugins      *plugins.Provider
 }
 
-func New(config providers.ConfigurationProvider, log *zap.Logger) (providers.AuthProvider, error) {
+func New(plugins *plugins.Provider, config providers.ConfigurationProvider, log *zap.Logger) (providers.AuthProvider, error) {
 	key := kdf.PbKdf2.Key(cryptoutil.NewRandom(128), 4096, 32, sha512.New)
 	localStore, err := config.GetString("paths.data")
 	if err != nil {
@@ -59,6 +62,7 @@ func New(config providers.ConfigurationProvider, log *zap.Logger) (providers.Aut
 		db:           db,
 		ephemeralKey: key.GetKey(),
 		logger:       log,
+		plugins:      plugins,
 	}
 
 	if isDBInit {
@@ -71,11 +75,16 @@ func New(config providers.ConfigurationProvider, log *zap.Logger) (providers.Aut
 }
 
 func (p *LocalProvider) String() string {
-	return "PAM"
+	return "LOCAL"
 }
 
 func (p *LocalProvider) Authenticate(ctx context.Context) (string, error) {
-	token, err := middleware.AuthFromMetadata(ctx, "local", "authorization")
+	sesTtlCtx := ctx.Value("sessionTtl")
+	sesTtl, ok := sesTtlCtx.(time.Duration)
+	if sesTtlCtx == nil || !ok {
+		panic("invalid session ttl on authentication attempt, check configurations")
+	}
+	token, err := auth.Metadata(ctx, "local", "authorization")
 	if err != nil {
 		return "", err
 	}
@@ -112,18 +121,19 @@ func (p *LocalProvider) Authenticate(ctx context.Context) (string, error) {
 	// Check the password
 	pwString, _ := entInfo.Get("auth.auth_token")
 	pwKey, _ := kdf.PbKdf2.FromString(pwString.(string))
-	if pwKey.Equals(string(password)) {
+	if !pwKey.Equals(string(password)) {
 		time.Sleep(1 * time.Second)
 		return "", status.Error(codes.Unauthenticated, "Invalid username or password")
 	}
 
 	sesId := uuid.New()
-	sesInfo := memkv.NewMemKV(".", nil)
-	sesInfo.Set("session.user.username", string(username))
-	sesInfo.Set("session.user.realm", "local")
-	sesInfo.Set("session.id", sesId)
-	sesInfo.Set("session.expires", time.Now().Add(20*time.Hour))
-	data, err = json.Marshal(sesInfo.GetSerializableMap())
+	session := &providers.SessionInfo{
+		Principal: string(username),
+		Realm:     "local",
+		Id:        sesId,
+		Deadline:  time.Now().Add(sesTtl).UTC().Unix(),
+	}
+	data, err = msgpack.Marshal(session)
 	if err != nil {
 		return "", status.Error(codes.Internal, "An internal error occurred")
 	}
@@ -135,8 +145,8 @@ func (p *LocalProvider) Authenticate(ctx context.Context) (string, error) {
 	return token, nil
 }
 
-func (p *LocalProvider) GetSession(ctx context.Context) (context.Context, error) {
-	token, err := middleware.AuthFromMetadata(ctx, "encrypted", "authorization")
+func (p *LocalProvider) Authorize(ctx context.Context, method string) (context.Context, error) {
+	token, err := auth.Metadata(ctx, "encrypted", "authorization")
 	if err != nil {
 		return nil, err
 	}
@@ -156,21 +166,32 @@ func (p *LocalProvider) GetSession(ctx context.Context) (context.Context, error)
 		p.logger.Debug("Failed to unmarshal session data", zap.Error(err))
 		return nil, status.Error(codes.Unauthenticated, "Your session data is invalid")
 	}
-	tokenData := make(map[string]any)
-	err = json.Unmarshal(decrypted, &tokenData)
+	session := &providers.SessionInfo{}
+	err = msgpack.Unmarshal(decrypted, &session)
 	if err != nil {
 		p.logger.Debug("Failed to unmarshal session data", zap.Error(err))
 		return nil, status.Error(codes.Unauthenticated, "Your session data is invalid")
 	}
 
-	entInfo := memkv.NewMemKV(".", nil)
-	err = entInfo.LoadFromSerializableMap(tokenData)
-	if err != nil {
-		p.logger.Debug("Failed to unmarshal session data", zap.Error(err))
-		return nil, status.Error(codes.Unauthenticated, "Your session data is invalid")
+	exp := time.Unix(session.Deadline, 0).UTC()
+	if time.Now().UTC().Compare(exp) == -1 {
+		return nil, status.Error(codes.Unauthenticated, "Token is invalid or expired")
 	}
 
-	return context.WithValue(ctx, "session", entInfo), nil
+	env := plugins.Env{
+		Method:  method,
+		Session: *session,
+	}
+
+	check, err := p.plugins.Check(method, env)
+	if err != nil {
+		return nil, err
+	}
+	if !check {
+		return nil, status.Error(codes.PermissionDenied, "You cannot perform this action!")
+	}
+
+	return context.WithValue(ctx, "session", session), nil
 }
 
 func (p *LocalProvider) InitNewDB() error {

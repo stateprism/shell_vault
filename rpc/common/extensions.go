@@ -1,6 +1,8 @@
-package caproto
+package common
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func NewEmptyExtensions() *Extensions {
 	return &Extensions{
@@ -103,4 +105,8 @@ func MakeNewExtension(value interface{}) (*Extension, error) {
 	default:
 		return nil, fmt.Errorf("unsupported type for Extension")
 	}
+}
+
+func StringValue(v string) *string {
+	return &v
 }

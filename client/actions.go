@@ -139,7 +139,7 @@ func requestCert(c *cli.Context) error {
 		return err
 	}
 
-	certBytes, err := client.RequestCert(key.Marshal())
+	certBytes, err := client.RequestUserCert(key.Marshal())
 	if err != nil {
 		return err
 	}

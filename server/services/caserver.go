@@ -4,6 +4,8 @@ import (
 	"context"
 	cryptorand "crypto/rand"
 	"fmt"
+	"github.com/google/uuid"
+	"github.com/stateprism/shell_vault/rpc/common"
 	"golang.org/x/crypto/ssh"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -11,8 +13,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/stateprism/libprisma/memkv"
 	pb "github.com/stateprism/shell_vault/rpc/caproto"
+	pbcommon "github.com/stateprism/shell_vault/rpc/common"
 	"github.com/stateprism/shell_vault/server/lib"
 	"github.com/stateprism/shell_vault/server/providers"
 	"go.uber.org/fx"
@@ -21,7 +23,7 @@ import (
 )
 
 type CaServer struct {
-	pb.UnsafePrismaCaServer
+	pb.CertificateAuthorityServer
 	config      providers.ConfigurationProvider
 	authPro     providers.AuthProvider
 	vault       providers.KeychainProvider
@@ -31,6 +33,7 @@ type CaServer struct {
 	rootTtl     int64
 	rootKt      providers.KeyType
 	userCertTtl uint64
+	sessionTtl  time.Duration
 }
 
 type CaServerParams struct {
@@ -74,6 +77,8 @@ func NewCAServer(p CaServerParams) (*CaServer, error) {
 	s.rootKt = providers.KTFromString(rKts)
 	s.rootTtl = rktTtl
 	s.userCertTtl = uint64(userCertTtl)
+	sessionTtl := providers.GetOrDefault(s.config, "ca_server.auth_session_ttl", int64(72000))
+	s.sessionTtl = time.Duration(sessionTtl)
 
 	s.vault.SetExpKeyHook(s.expKeyHook)
 
@@ -93,21 +98,21 @@ func NewCAServer(p CaServerParams) (*CaServer, error) {
 	return s, nil
 }
 
-func (s *CaServer) Authenticate(ctx context.Context, _ *pb.EmptyMsg) (*pb.AuthReply, error) {
+func (s *CaServer) Authenticate(ctx context.Context, _ *pbcommon.Empty) (*pbcommon.AuthReply, error) {
+	ctx = context.WithValue(ctx, "sessionTtl", s.sessionTtl)
 	ent, err := s.authPro.Authenticate(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.AuthReply{
+	return &pbcommon.AuthReply{
 		AuthTime:  time.Now().Unix(),
-		AuthUntil: time.Now().Add(time.Duration(s.userCertTtl) * time.Second).Unix(),
+		AuthUntil: time.Now().Add(s.sessionTtl * time.Second).Unix(),
 		AuthToken: ent,
 		Success:   true,
-		Errors:    nil,
 	}, nil
 }
 
-func (s *CaServer) GetCurrentKey(ctx context.Context, _ *pb.EmptyMsg) (*pb.CertReply, error) {
+func (s *CaServer) GetCurrentKey(ctx context.Context, _ *pbcommon.Empty) (*pb.CertReply, error) {
 	pko, err := s.vault.RetrieveKey("rootKey")
 	if err != nil {
 		s.logger.Fatal("Root key not found", zap.Error(err))
@@ -127,32 +132,31 @@ func (s *CaServer) GetCurrentKey(ctx context.Context, _ *pb.EmptyMsg) (*pb.CertR
 	}, nil
 }
 
-func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.CertReply, error) {
+func (s *CaServer) RequestUserCertificate(ctx context.Context, msg *pb.UserCertRequest) (*pb.CertReply, error) {
+	// Retrieve the key
 	pko, err := s.vault.RetrieveKey("rootKey")
 	if err != nil {
 		s.logger.Fatal("Root key not found", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Internal error")
 	}
+	// Get the key into a type we can use with ssh lib
 	pkr := pko.UnwrapKey()
 	signer, err := ssh.NewSignerFromKey(pkr)
 	if err != nil {
 		s.logger.Fatal("Error creating signer", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Internal error")
 	}
-	session := ctx.Value("session").(*memkv.MemKV)
+	session := ctx.Value("session").(*providers.SessionInfo)
 	if session == nil {
 		return nil, fmt.Errorf("session is nil")
 	}
-
+	// Load the key into the signer
 	pubk, err := ssh.ParsePublicKey(msg.PublicKey)
 	if err != nil {
 		return nil, err
 	}
+	// Make the certificate
 	serial := rand.Uint64()
-	principal, ok := session.Get("session.user.username")
-	if !ok {
-		return nil, fmt.Errorf("principal not found")
-	}
 	cert := ssh.Certificate{
 		Key:         pubk,
 		Serial:      serial,
@@ -160,8 +164,52 @@ func (s *CaServer) RequestCert(ctx context.Context, msg *pb.CertRequest) (*pb.Ce
 		ValidBefore: uint64(time.Now().Add(time.Duration(s.userCertTtl) * time.Second).UTC().Unix()),
 		CertType:    ssh.UserCert,
 		ValidPrincipals: []string{
-			principal.(string),
+			session.Principal,
+			uuid.New().URN(),
 		},
+	}
+	err = cert.SignCert(cryptorand.Reader, signer)
+	if err != nil {
+		s.logger.Error("Error signing cert", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Internal error")
+	}
+	return &pb.CertReply{
+		Cert:       string(ssh.MarshalAuthorizedKey(&cert)),
+		ValidUntil: int64(cert.ValidBefore),
+	}, nil
+}
+
+func (s *CaServer) RequestServerCertificate(ctx context.Context, msg *pb.HostCertRequest) (*pb.CertReply, error) {
+	// Retrieve the key
+	pko, err := s.vault.RetrieveKey("rootKey")
+	if err != nil {
+		s.logger.Fatal("Root key not found", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Internal error")
+	}
+	// Get the key into a type we can use with ssh lib
+	pkr := pko.UnwrapKey()
+	signer, err := ssh.NewSignerFromKey(pkr)
+	if err != nil {
+		s.logger.Fatal("Error creating signer", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Internal error")
+	}
+	session := ctx.Value("session").(*providers.SessionInfo)
+	if session == nil {
+		return nil, fmt.Errorf("session is nil")
+	}
+	// Load the key into the signer
+	pubk, err := ssh.ParsePublicKey(msg.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	serial := rand.Uint64()
+	cert := ssh.Certificate{
+		Key:             pubk,
+		Serial:          serial,
+		ValidAfter:      uint64(time.Now().Add(1 * time.Second).UTC().Unix()),
+		ValidBefore:     uint64(time.Now().Add(time.Duration(s.userCertTtl) * time.Second).UTC().Unix()),
+		CertType:        ssh.HostCert,
+		ValidPrincipals: msg.GetHostnames(),
 	}
 	err = cert.SignCert(cryptorand.Reader, signer)
 	if err != nil {
@@ -179,16 +227,16 @@ func (s *CaServer) GetConfig(context.Context, *pb.ConfigRequest) (*pb.ConfigRepl
 	if serverId == "" {
 		serverId = "prisma-ca"
 	}
-	policy := pb.NewEmptyExtensions()
+	policy := common.NewEmptyExtensions()
 	policy.SetExtensionsRoot()
 	ktArr := lib.ArrayToInterfaceArray(providers.KTArrayToKTStringArray(s.allowedKT))
-	policyData, err := pb.MakeNewExtension(ktArr)
+	policyData, err := common.MakeNewExtension(ktArr)
 	if err != nil {
 		s.logger.Fatal("Error creating policy extension")
 	}
 	policy.Set("allowed_key_types", policyData)
 	return &pb.ConfigReply{
-		ServerProtocolVersion: &pb.Version{
+		ServerProtocolVersion: &pbcommon.Version{
 			Major: 1,
 			Minor: 0,
 			Patch: 0,
@@ -200,7 +248,7 @@ func (s *CaServer) GetConfig(context.Context, *pb.ConfigRequest) (*pb.ConfigRepl
 }
 
 func (s *CaServer) RegisterServer(srv *grpc.Server) {
-	pb.RegisterPrismaCaServer(srv, s)
+	pb.RegisterCertificateAuthorityServer(srv, s)
 }
 
 func (s *CaServer) rotateRootKey() error {

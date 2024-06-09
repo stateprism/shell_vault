@@ -1,15 +1,17 @@
 syntax = "proto3";
+import "common/common.proto";
 
 option go_package = "github.com/stateprism/shell_vault/rpc/caproto";
 
-service PrismaCa {
+service CertificateAuthority {
   rpc GetConfig(ConfigRequest) returns (ConfigReply) {}
-  rpc Authenticate(EmptyMsg) returns (AuthReply) {}
-  rpc RequestCert(CertRequest) returns (CertReply) {}
-  rpc GetCurrentKey(EmptyMsg) returns (CertReply) {}
+  rpc Authenticate(Empty) returns (AuthReply) {}
+  rpc RequestUserCertificate(UserCertRequest) returns (CertReply) {}
+  rpc RequestServerCertificate(HostCertRequest) returns (CertReply) {}
+  rpc GetCurrentKey(Empty) returns (CertReply) {}
 }
 
-message Errors { map<string, string> errors = 1; }
+message Errors {map<string, string> errors = 1;}
 
 message ConfigRequest {
   Version client_version = 1;
@@ -29,61 +31,19 @@ message ConfigReply {
   Extensions policy = 4;
 }
 
-message EmptyMsg {}
 
-message AuthReply {
-  // The time at which the authentication was performed
-  int64 auth_time = 1;
-  // The time at which the authentication expires, or 0 if failure
-  int64 auth_until = 2;
-  // The authentication token to be used for further requests
-  string auth_token = 3;
-  // Whether the authentication was successful
-  bool success = 4;
-  // Any errors that occurred during authentication
-  Errors errors = 5;
+message UserCertRequest {
+  fixed64 requested_validity = 2;
+  bytes public_key = 3;
+  optional string extendedValidityJustification = 4;
 }
 
-message CertRequest {
-  bytes public_key = 3;
-  fixed64 requested_validity = 2;
-  optional string extendedValidityJustification = 4;
+message HostCertRequest {
+  bytes public_key = 1;
+  repeated string hostnames = 2;
 }
 
 message CertReply {
   string cert = 1;
   int64 validUntil = 2;
-}
-
-enum ExtensionType {
-  EMPTY = 0;
-  STRING = 1;
-  INTEGER = 2;
-  BOOLEAN = 3;
-  BYTES = 4;
-  EXTENSION = 5;
-  ARRAY = 6;
-}
-
-message ExtensionArray { repeated Extension values = 1; }
-
-message Extensions {
-  map<string, Extension> extensions = 1;
-  bool is_empty = 2;
-}
-
-message Extension {
-  ExtensionType type = 1;
-  optional string string_value = 2;
-  optional int64 integer_value = 3;
-  optional bool boolean_value = 4;
-  optional bytes bytes_value = 5;
-  optional Extensions extension_value = 6;
-  optional ExtensionArray array_value = 7;
-}
-
-message Version {
-  uint32 major = 1;
-  uint32 minor = 2;
-  uint32 patch = 3;
 }

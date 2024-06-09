@@ -8,6 +8,7 @@ package adminproto
 
 import (
 	context "context"
+	common "github.com/stateprism/shell_vault/rpc/common"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -22,11 +23,10 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AdminServiceClient interface {
-	AdminAuthInit(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*AdminAuthInitResponse, error)
-	AdminAuthRespond(ctx context.Context, in *AdminAuthRequest, opts ...grpc.CallOption) (*AdminAuthResponse, error)
-	StopServer(ctx context.Context, in *StopServerRequest, opts ...grpc.CallOption) (*Empty, error)
+	Authenticate(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*common.AuthReply, error)
 	ChangeRootCert(ctx context.Context, in *ChangeRootCertRequest, opts ...grpc.CallOption) (*ChangeRootCertResponse, error)
 	AddUser(ctx context.Context, in *AddUserRequest, opts ...grpc.CallOption) (*UserActionResponse, error)
+	RestartServer(ctx context.Context, in *StopServerRequest, opts ...grpc.CallOption) (*common.Empty, error)
 }
 
 type adminServiceClient struct {
@@ -37,27 +37,9 @@ func NewAdminServiceClient(cc grpc.ClientConnInterface) AdminServiceClient {
 	return &adminServiceClient{cc}
 }
 
-func (c *adminServiceClient) AdminAuthInit(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*AdminAuthInitResponse, error) {
-	out := new(AdminAuthInitResponse)
-	err := c.cc.Invoke(ctx, "/AdminService/AdminAuthInit", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminServiceClient) AdminAuthRespond(ctx context.Context, in *AdminAuthRequest, opts ...grpc.CallOption) (*AdminAuthResponse, error) {
-	out := new(AdminAuthResponse)
-	err := c.cc.Invoke(ctx, "/AdminService/AdminAuthRespond", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminServiceClient) StopServer(ctx context.Context, in *StopServerRequest, opts ...grpc.CallOption) (*Empty, error) {
-	out := new(Empty)
-	err := c.cc.Invoke(ctx, "/AdminService/StopServer", in, out, opts...)
+func (c *adminServiceClient) Authenticate(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*common.AuthReply, error) {
+	out := new(common.AuthReply)
+	err := c.cc.Invoke(ctx, "/AdminService/Authenticate", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -82,15 +64,23 @@ func (c *adminServiceClient) AddUser(ctx context.Context, in *AddUserRequest, op
 	return out, nil
 }
 
+func (c *adminServiceClient) RestartServer(ctx context.Context, in *StopServerRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, "/AdminService/RestartServer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility
 type AdminServiceServer interface {
-	AdminAuthInit(context.Context, *Empty) (*AdminAuthInitResponse, error)
-	AdminAuthRespond(context.Context, *AdminAuthRequest) (*AdminAuthResponse, error)
-	StopServer(context.Context, *StopServerRequest) (*Empty, error)
+	Authenticate(context.Context, *common.Empty) (*common.AuthReply, error)
 	ChangeRootCert(context.Context, *ChangeRootCertRequest) (*ChangeRootCertResponse, error)
 	AddUser(context.Context, *AddUserRequest) (*UserActionResponse, error)
+	RestartServer(context.Context, *StopServerRequest) (*common.Empty, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -98,20 +88,17 @@ type AdminServiceServer interface {
 type UnimplementedAdminServiceServer struct {
 }
 
-func (UnimplementedAdminServiceServer) AdminAuthInit(context.Context, *Empty) (*AdminAuthInitResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AdminAuthInit not implemented")
-}
-func (UnimplementedAdminServiceServer) AdminAuthRespond(context.Context, *AdminAuthRequest) (*AdminAuthResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AdminAuthRespond not implemented")
-}
-func (UnimplementedAdminServiceServer) StopServer(context.Context, *StopServerRequest) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StopServer not implemented")
+func (UnimplementedAdminServiceServer) Authenticate(context.Context, *common.Empty) (*common.AuthReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Authenticate not implemented")
 }
 func (UnimplementedAdminServiceServer) ChangeRootCert(context.Context, *ChangeRootCertRequest) (*ChangeRootCertResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChangeRootCert not implemented")
 }
 func (UnimplementedAdminServiceServer) AddUser(context.Context, *AddUserRequest) (*UserActionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddUser not implemented")
+}
+func (UnimplementedAdminServiceServer) RestartServer(context.Context, *StopServerRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RestartServer not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 
@@ -126,56 +113,20 @@ func RegisterAdminServiceServer(s grpc.ServiceRegistrar, srv AdminServiceServer)
 	s.RegisterService(&AdminService_ServiceDesc, srv)
 }
 
-func _AdminService_AdminAuthInit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
+func _AdminService_Authenticate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(common.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AdminServiceServer).AdminAuthInit(ctx, in)
+		return srv.(AdminServiceServer).Authenticate(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/AdminService/AdminAuthInit",
+		FullMethod: "/AdminService/Authenticate",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminServiceServer).AdminAuthInit(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminService_AdminAuthRespond_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AdminAuthRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminServiceServer).AdminAuthRespond(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/AdminService/AdminAuthRespond",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminServiceServer).AdminAuthRespond(ctx, req.(*AdminAuthRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminService_StopServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(StopServerRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminServiceServer).StopServer(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/AdminService/StopServer",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminServiceServer).StopServer(ctx, req.(*StopServerRequest))
+		return srv.(AdminServiceServer).Authenticate(ctx, req.(*common.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -216,6 +167,24 @@ func _AdminService_AddUser_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_RestartServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopServerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).RestartServer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/AdminService/RestartServer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).RestartServer(ctx, req.(*StopServerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -224,16 +193,8 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*AdminServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "AdminAuthInit",
-			Handler:    _AdminService_AdminAuthInit_Handler,
-		},
-		{
-			MethodName: "AdminAuthRespond",
-			Handler:    _AdminService_AdminAuthRespond_Handler,
-		},
-		{
-			MethodName: "StopServer",
-			Handler:    _AdminService_StopServer_Handler,
+			MethodName: "Authenticate",
+			Handler:    _AdminService_Authenticate_Handler,
 		},
 		{
 			MethodName: "ChangeRootCert",
@@ -242,6 +203,10 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AddUser",
 			Handler:    _AdminService_AddUser_Handler,
+		},
+		{
+			MethodName: "RestartServer",
+			Handler:    _AdminService_RestartServer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

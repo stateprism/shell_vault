@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	pb "github.com/stateprism/shell_vault/rpc/caproto"
+	pbcommon "github.com/stateprism/shell_vault/rpc/common"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -16,7 +17,7 @@ import (
 type ClientConnection struct {
 	lock            sync.Mutex
 	token           string
-	client          pb.PrismaCaClient
+	client          pb.CertificateAuthorityClient
 	conn            *grpc.ClientConn
 	ctx             context.Context
 	isAuthenticated bool
@@ -46,7 +47,7 @@ func (cc *ClientConnection) TryConnect(addr string) error {
 	}
 	cc.conn = gc
 
-	client := pb.NewPrismaCaClient(gc)
+	client := pb.NewCertificateAuthorityClient(gc)
 	cc.client = client
 
 	return nil
@@ -60,7 +61,10 @@ func (cc *ClientConnection) Close() {
 		return
 	}
 
-	cc.conn.Close()
+	err := cc.conn.Close()
+	if err != nil {
+		return
+	}
 	cc.client = nil
 }
 
@@ -77,7 +81,7 @@ func (cc *ClientConnection) Authenticate(user string, pass string) error {
 	copy(loginData[len(user)+1:], pass)
 	md := metadata.New(map[string]string{"authorization": fmt.Sprintf("local %s", base64.StdEncoding.EncodeToString(loginData))})
 	ctx := metadata.NewOutgoingContext(cc.ctx, md)
-	resp, err := cc.client.Authenticate(ctx, &pb.EmptyMsg{})
+	resp, err := cc.client.Authenticate(ctx, &pbcommon.Empty{})
 	if err != nil {
 		return err
 	}
@@ -92,7 +96,7 @@ func (cc *ClientConnection) GetToken() string {
 	return cc.token
 }
 
-func (cc *ClientConnection) RequestCert(publicKey []byte) ([]byte, error) {
+func (cc *ClientConnection) RequestUserCert(publicKey []byte) ([]byte, error) {
 	cc.lock.Lock()
 	cc.lock.Unlock()
 
@@ -100,7 +104,24 @@ func (cc *ClientConnection) RequestCert(publicKey []byte) ([]byte, error) {
 		return nil, errors.New("not connected")
 	}
 
-	resp, err := cc.client.RequestCert(cc.ctx, &pb.CertRequest{
+	resp, err := cc.client.RequestUserCertificate(cc.ctx, &pb.UserCertRequest{
+		PublicKey: publicKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(resp.GetCert()), err
+}
+func (cc *ClientConnection) RequestHostCert(publicKey []byte, hostnames []string) ([]byte, error) {
+	cc.lock.Lock()
+	cc.lock.Unlock()
+
+	if cc.client == nil {
+		return nil, errors.New("not connected")
+	}
+
+	resp, err := cc.client.RequestUserCertificate(cc.ctx, &pb.UserCertRequest{
 		PublicKey: publicKey,
 	})
 	if err != nil {
@@ -111,7 +132,7 @@ func (cc *ClientConnection) RequestCert(publicKey []byte) ([]byte, error) {
 }
 
 func (cc *ClientConnection) GetCurrentCert() (string, int64, error) {
-	r, err := cc.client.GetCurrentKey(cc.ctx, &pb.EmptyMsg{})
+	r, err := cc.client.GetCurrentKey(cc.ctx, &pbcommon.Empty{})
 	if err != nil {
 		return "", 0, err
 	}

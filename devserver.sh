@@ -8,4 +8,4 @@ make server
 export SHELL_VAULT_ENV=DEV
 export SHELL_VAULT_KEK='testkekkey'
 export SHELL_VAULT_ROOT_PASSWORD='testtest'
-bin/server -run -config dev_root/etc/shell_vault -override-root ./dev_root
+bin/server -run -override-root ./dev_root

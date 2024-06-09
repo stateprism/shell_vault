@@ -1,35 +1,11 @@
 syntax = "proto3";
+import "common/common.proto";
 
 option go_package = "github.com/stateprism/shell_vault/rpc/adminproto";
-
-message Empty {}
 
 message StopServerRequest {
   string reason = 1;
   bytes token = 2;
-}
-
-message AdminAuthRequest {
-  bytes challenge_response = 1;
-  bytes challenge_id = 2;
-  bytes challenge_nonce = 3;
-}
-
-message AdminAuthInitResponse {
-  bytes challenge = 1;
-  bytes challenge_id = 2;
-  uint64 challenge_validity = 3;
-  uint64 challenge_nonce = 4;
-}
-
-message AdminAuthResponse {
-  // The username of the admin as will be logged in the server
-  optional string username = 1;
-  // The token to be used for further requests
-  optional bytes token = 2;
-  // The validity of the token in seconds
-  optional uint64 token_validity = 3;
-  bool success = 4;
 }
 
 message ChangeRootCertRequest {
@@ -58,9 +34,8 @@ message UserActionResponse {
 }
 
 service AdminService {
-  rpc AdminAuthInit (Empty) returns (AdminAuthInitResponse);
-  rpc AdminAuthRespond (AdminAuthRequest) returns (AdminAuthResponse);
-  rpc StopServer (StopServerRequest) returns (Empty);
+  rpc Authenticate(Empty) returns (AuthReply) {}
   rpc ChangeRootCert (ChangeRootCertRequest) returns (ChangeRootCertResponse);
   rpc AddUser (AddUserRequest) returns (UserActionResponse);
+  rpc RestartServer (StopServerRequest) returns (Empty);
 }
