@@ -5,8 +5,8 @@ description = "Allow any user to get a user certificate, allow only root to get 
 
 [[sources]]
 file = "all_users.expr"
-applies_to = ["/CertificateAuthority/RequestUserCertificate"]
+applies_to = "/CertificateAuthority/RequestUserCertificate"
 
 [[sources]]
 file = "only_root.expr"
-applies_to = ["/CertificateAuthority/RequestUserCertificate"]
+applies_to = "/CertificateAuthority/RequestHostCertificate"

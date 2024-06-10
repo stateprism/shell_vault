@@ -10,6 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/term"
 	"os"
 	"strings"
 	"time"
@@ -88,31 +89,33 @@ func refreshCaCert(c *cli.Context) error {
 func requestCert(c *cli.Context) error {
 	fmt.Println("Requesting certificate")
 
-	ctx, cancel := context.WithTimeout(context.Background(), c.Duration("timeout"))
-	defer cancel()
-
-	client := clientutils.NewClientConnection(ctx)
-	err := client.TryConnect(c.String("addr"))
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-
 	// authenticate
 	// ask for username and password
 	fmt.Println("Enter username:")
 	var username string
-	_, err = fmt.Scan(&username)
+	_, err := fmt.Scan(&username)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("Enter password:")
 	var password string
-	_, err = fmt.Scan(&password)
+	pw, err := term.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println()
+	password = string(pw)
+
+	ctx, cancel := context.WithTimeout(context.Background(), c.Duration("timeout"))
+	defer cancel()
+
+	client := clientutils.NewClientConnection(ctx)
+	err = client.TryConnect(c.String("addr"))
 	if err != nil {
 		return err
 	}
+	defer client.Close()
 
 	err = client.Authenticate(username, password)
 	if err != nil {

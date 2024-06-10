@@ -11,6 +11,7 @@ type SessionInfo struct {
 	Realm     string
 	Id        uuid.UUID
 	Deadline  int64
+	ExtraData map[string]any
 }
 
 type AuthProvider interface {

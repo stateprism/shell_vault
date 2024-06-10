@@ -5,47 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b432118a-b097-4db4-a10f-b85e77e41ed9" name="Changes" comment="Works on the container :) nearing mvp state">
-      <change afterPath="$PROJECT_DIR$/dev_root/etc/shell_vault/authorizers/local_auth/all_users.expr" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dev_root/etc/shell_vault/authorizers/local_auth/manifest.toml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dev_root/etc/shell_vault/authorizers/local_auth/only_root.expr" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/go.work" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/rpc/common/common.proto" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/server/plugins/plugins.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/59fffabf-ae47-4f1e-bdc8-7e4ce2459a80.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/59fffabf-ae47-4f1e-bdc8-7e4ce2459a80/storage_v2/_src_/schema/main.uQUzAA.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/99efff86-ab5c-4d13-b80e-9e6ce0c80cd4.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/99efff86-ab5c-4d13-b80e-9e6ce0c80cd4/storage_v2/_src_/schema/main.uQUzAA.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/runConfigurations/go_build_github_com_stateprism_shell_vault_server.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/runConfigurations/go_build_github_com_stateprism_shell_vault_server.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build_dist.sh" beforeDir="false" afterPath="$PROJECT_DIR$/build_dist.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/actions.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/actions.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/clientutils/connect.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/clientutils/connect.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/clientutils/request.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev_root/etc/shell_vault/authorizers/local_auth/manifest.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dev_root/etc/shell_vault/authorizers/local_auth/manifest.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dev_root/etc/shell_vault/config.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dev_root/etc/shell_vault/config.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/devserver.sh" beforeDir="false" afterPath="$PROJECT_DIR$/devserver.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libprisma/cryptoutil/encryption/aes.go" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/cryptoutil/encryption/aes.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/rpc/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/adminproto/admin.pb.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/adminproto/admin.proto" beforeDir="false" afterPath="$PROJECT_DIR$/rpc/adminproto/admin.proto" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/adminproto/admin_grpc.pb.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/caproto/extensions.go" beforeDir="false" afterPath="$PROJECT_DIR$/rpc/common/extensions.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/caproto/server.pb.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/caproto/server.proto" beforeDir="false" afterPath="$PROJECT_DIR$/rpc/caproto/server.proto" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/caproto/server_grpc.pb.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/caproto/version.go" beforeDir="false" afterPath="$PROJECT_DIR$/rpc/common/version.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/serve.sh" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/authproviders/integratedprovider/provider.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/authproviders/integratedprovider/provider.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/configproviders/tomlprovider/config.toml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/configproviders/tomlprovider/provider.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/configproviders/tomlprovider/provider.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/server/go.mod" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/server/go.sum" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/init.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/init.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/middleware/auth.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/middleware/auth/auth.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/plugins/plugins.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/plugins/plugins.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/providers/authprovider.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/providers/authprovider.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/providers/configprovider.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/providers/configprovider.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/services/adminserver.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/services/adminserver.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/services/caserver.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/services/caserver.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -76,7 +45,7 @@
   "keyToString": {
     "DefaultGoTemplateProperty": "Go File",
     "Go Build.go build github.com/stateprism/shell_vault/client.executor": "Debug",
-    "Go Build.go build github.com/stateprism/shell_vault/server.executor": "Debug",
+    "Go Build.go build github.com/stateprism/shell_vault/server.executor": "Run",
     "Go Test.go test github.com/stateprism/libprisma/cryptoutil/encryption.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.go.formatter.settings.were.checked": "true",
@@ -149,21 +118,5 @@
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/client/actions.go</url>
-          <line>90</line>
-          <option name="timeStamp" value="16" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/server/authproviders/integratedprovider/provider.go</url>
-          <line>108</line>
-          <option name="timeStamp" value="21" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>

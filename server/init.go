@@ -83,15 +83,24 @@ func Bootstrap(p BootstrapParams) (BootStrapResult, error) {
 		p.Env.UnsetEnv(k)
 	}
 
-	var logger *zap.Logger
+	var config zap.Config
+
 	runMode := p.Env.GetEnvOrDefault("ENV", "PROD")
 	if runMode == "DEV" || runMode == "MAINTENANCE" {
-		l, _ := zap.NewDevelopment()
-		logger = l
+		config = zap.NewDevelopmentConfig()
+		if providers.GetOrDefault(configProvider, "logging.put_to_files", false) {
+			config.OutputPaths = append(config.ErrorOutputPaths, path.Join(p.Paths.Log, "server.log"))
+			config.ErrorOutputPaths = append(config.ErrorOutputPaths, path.Join(p.Paths.Log, "server_error.log"))
+		}
 	} else {
-		l, _ := zap.NewProduction()
-		logger = l
+		config = zap.NewProductionConfig()
+		if providers.GetOrDefault(configProvider, "logging.put_to_files", false) {
+			config.OutputPaths = append(config.ErrorOutputPaths, path.Join(p.Paths.Log, "server.log"))
+			config.ErrorOutputPaths = append(config.ErrorOutputPaths, path.Join(p.Paths.Log, "server_error.log"))
+		}
 	}
+
+	logger := zap.Must(config.Build())
 
 	logger.Info("Starting server in", zap.String("env", string(runMode)))
 	logger.Info("config path", zap.String("path", p.Paths.Config))

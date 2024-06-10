@@ -2,19 +2,19 @@ package plugins
 
 import (
 	"fmt"
-	"github.com/BurntSushi/toml"
+	"github.com/pelletier/go-toml/v2"
+
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
 	"github.com/stateprism/shell_vault/server/providers"
 	"go.uber.org/zap"
 	"os"
 	"path"
-	"slices"
 )
 
 type PluginExpr struct {
-	File      string   `toml:"file"`
-	AppliesTo []string `toml:"applies_to"`
+	File      string `toml:"file"`
+	AppliesTo string `toml:"applies_to"`
 }
 
 type PluginManifest struct {
@@ -26,7 +26,8 @@ type PluginManifest struct {
 }
 
 type Program struct {
-	AppliesTo []string
+	Source    string
+	AppliesTo string
 	Prog      *vm.Program
 }
 
@@ -49,6 +50,7 @@ type ProviderParams struct {
 type Env struct {
 	Method  string
 	Session providers.SessionInfo
+	Extra   map[string]any
 }
 
 func NewProvider(p ProviderParams) (*Provider, error) {
@@ -66,18 +68,25 @@ func NewProvider(p ProviderParams) (*Provider, error) {
 }
 
 func (p *Provider) Check(method string, env Env) (bool, error) {
-	for _, p := range p.plugins {
-		for _, prog := range p.Programs {
-			if slices.Contains(prog.AppliesTo, method) {
+	applied := make([]bool, 0)
+	for _, plugins := range p.plugins {
+		for _, prog := range plugins.Programs {
+			if prog.AppliesTo == method {
+				p.logger.Debug("Applying expr program", zap.String("source_file", prog.Source))
 				res, err := expr.Run(prog.Prog, env)
 				if err != nil {
 					return false, err
 				}
-				return res.(bool), nil
+				applied = append(applied, res.(bool))
 			}
 		}
 	}
-	return false, nil
+	for _, r := range applied {
+		if !r {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (p *Provider) loadPlugins() error {
@@ -97,6 +106,7 @@ func (p *Provider) loadPlugins() error {
 	for _, entry := range dir {
 		// skip single files
 		if !entry.IsDir() {
+			p.logger.Warn("Found single file in plugins dir", zap.String("name", entry.Name()))
 			continue
 		}
 		plugin, err := p.loadPlugin(entry.Name())
@@ -122,7 +132,7 @@ func (p *Provider) loadPlugin(pluginPath string) (*Plugin, error) {
 	}
 	manifest := &PluginManifest{}
 
-	_, err = toml.Decode(string(data), manifest)
+	err = toml.Unmarshal(data, manifest)
 	if err != nil {
 		return nil, err
 	}
@@ -138,6 +148,7 @@ func (p *Provider) loadPlugin(pluginPath string) (*Plugin, error) {
 			continue
 		}
 		plugin.Programs = append(plugin.Programs, Program{
+			Source:    path.Join(pluginFolder, source.File),
 			AppliesTo: source.AppliesTo,
 			Prog:      prog,
 		})

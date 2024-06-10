@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 
-UPX_FLAGS=("--lzma" "--backup")
+UPX_FLAGS=("--lzma")
 GOOS_LIST=("windows" "linux" "darwin")
 
 make clean
