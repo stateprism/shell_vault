@@ -14,7 +14,8 @@ allowed_key_types = [ "ecdsa", "ed25519" ]
 # After this many seconds the server will automatically rotate the certs private key
 # and publish the new key
 root_key_type = "ed25519"
-root_key_max_ttl = 2592000
+# The default key will be valid for a whole year
+root_key_max_ttl = 31104000
 user_cert_ttl = 72000
 auth_session_ttl = 72000
 

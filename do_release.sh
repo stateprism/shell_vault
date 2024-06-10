@@ -14,4 +14,6 @@ for dir in release_*; do
     tar -cvzf "$dir.tar.gz" "$dir"
 done
 
+
+
 echo Done

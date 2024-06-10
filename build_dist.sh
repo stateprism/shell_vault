@@ -3,17 +3,21 @@
 
 UPX_FLAGS=("--lzma")
 GOOS_LIST=("windows" "linux" "darwin")
+GOARCH_LIST=("amd64" "arm64")
 
 make clean
 rm -rf release
 mkdir release
 
 for os in "${GOOS_LIST[@]}"; do
-    echo "Building for $os"
-    GOOS=$os make build
-    mkdir "release_$os"
-    mv bin/* "release_$os"
-    upx "${UPX_FLAGS[@]}" release_$os/*
+  for arch in "${GOARCH_LIST[@]}"; do
+    echo "Building for $os $arch..."
+    GOOS=$os GOARCH=$arch make build
+    mkdir "release_${os}_$arch"
+    mv bin/* "release_${os}_$arch"
+    upx "${UPX_FLAGS[@]}" release_${os}_$arch/*
+
+  done
 done
 
 mv release_* release
