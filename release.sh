@@ -2,6 +2,9 @@
 
 # This script is used to release a new version of the project.
 cd /src || exit
+
+bash scripts/build.sh
+
 rm -rf release_packages
 mkdir release_packages
 cp -r release/* release_packages/

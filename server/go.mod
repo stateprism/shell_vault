@@ -22,7 +22,6 @@ require (
 )
 
 require (
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.uber.org/dig v1.17.1 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect

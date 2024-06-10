@@ -12,6 +12,7 @@ require (
 	github.com/stateprism/shell_vault/rpc v0.0.0-00010101000000-000000000000
 	github.com/urfave/cli/v2 v2.27.2
 	golang.org/x/crypto v0.24.0
+	golang.org/x/term v0.21.0
 	google.golang.org/grpc v1.64.0
 )
 
