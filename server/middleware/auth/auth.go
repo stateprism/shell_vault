@@ -54,7 +54,7 @@ func UnaryServerInterceptor(f AuthFn) grpc.UnaryServerInterceptor {
 func Metadata(ctx context.Context, expectedScheme string, header string) (string, error) {
 	headerVal := metadata.ExtractIncoming(ctx).Get(header)
 	if headerVal == "" {
-		return "", status.Error(codes.Unauthenticated, "Request is not authenticated properly")
+		return "", status.Error(codes.Unauthenticated, "Request is not authenticated properly, no authorization header found")
 	}
 	scheme, token, found := strings.Cut(headerVal, " ")
 	if !found {

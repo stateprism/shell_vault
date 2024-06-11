@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
 	"github.com/stateprism/shell_vault/server/authproviders/integratedprovider"
@@ -162,18 +163,40 @@ func NewConfig(configPath string) (providers.ConfigurationProvider, error) {
 
 func GrpcListen(p GrpcServerParams) []*grpc.Server {
 	s := make([]*grpc.Server, 0)
-	aS := grpc.NewServer()
+	opts := []logging.Option{
+		logging.WithLogOnEvents(logging.StartCall, logging.FinishCall),
+		// Add any other option (check functions starting with logging.With).
+	}
+
+	var aS *grpc.Server
+	if p.RunMode == "DEV" {
+		aS = grpc.NewServer(
+			grpc.ChainUnaryInterceptor(
+				logging.UnaryServerInterceptor(InterceptorLogger(p.Log), opts...),
+				selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(p.Auth.Authorize), selector.MatchFunc(skipAuthService)),
+			),
+		)
+	} else {
+		aS = grpc.NewServer(
+			grpc.ChainUnaryInterceptor(
+				selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(p.Auth.Authorize), selector.MatchFunc(skipAuthService)),
+				recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(recoverPanic)),
+			),
+		)
+	}
 	var cS *grpc.Server
 	if p.RunMode == "DEV" {
 		cS = grpc.NewServer(
 			grpc.ChainUnaryInterceptor(
 				selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(p.Auth.Authorize), selector.MatchFunc(skipAuthService)),
+				logging.UnaryServerInterceptor(InterceptorLogger(p.Log), opts...),
 			),
 		)
 	} else {
 		cS = grpc.NewServer(
 			grpc.ChainUnaryInterceptor(
 				selector.UnaryServerInterceptor(auth.UnaryServerInterceptor(p.Auth.Authorize), selector.MatchFunc(skipAuthService)),
+				logging.UnaryServerInterceptor(InterceptorLogger(p.Log), opts...),
 				recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(recoverPanic)),
 			),
 		)
@@ -222,9 +245,11 @@ func recoverPanic(p any) (err error) {
 func skipAuthService(_ context.Context, c interceptors.CallMeta) bool {
 	exemptList := []string{
 		"/CertificateAuthority/Authenticate",
-		"/CertificateAuthority/GetCurrentKey",
+		//"/CertificateAuthority/GetCurrentKey",
 	}
-	return !slices.Contains(exemptList, c.FullMethod())
+	shouldSkip := slices.Contains(exemptList, c.FullMethod())
+	// skips on false
+	return !shouldSkip
 }
 
 func NewAuthProvider(plugins *plugins.Provider, config providers.ConfigurationProvider, logger *zap.Logger) (providers.AuthProvider, error) {
@@ -239,4 +264,41 @@ func NewAuthProvider(plugins *plugins.Provider, config providers.ConfigurationPr
 	default:
 		return nil, fmt.Errorf("unknown auth provider")
 	}
+}
+
+func InterceptorLogger(l *zap.Logger) logging.Logger {
+	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
+		f := make([]zap.Field, 0, len(fields)/2)
+
+		for i := 0; i < len(fields); i += 2 {
+			key := fields[i]
+			value := fields[i+1]
+
+			switch v := value.(type) {
+			case string:
+				f = append(f, zap.String(key.(string), v))
+			case int:
+				f = append(f, zap.Int(key.(string), v))
+			case bool:
+				f = append(f, zap.Bool(key.(string), v))
+			default:
+				f = append(f, zap.Any(key.(string), v))
+			}
+		}
+
+		logger := l.WithOptions(zap.AddCallerSkip(1)).With(f...)
+
+		switch lvl {
+		case logging.LevelDebug:
+			logger.Debug(msg)
+		case logging.LevelInfo:
+			logger.Info(msg)
+		case logging.LevelWarn:
+			logger.Warn(msg)
+		case logging.LevelError:
+			logger.Error(msg)
+		default:
+			panic(fmt.Sprintf("unknown level %v", lvl))
+		}
+	})
 }

@@ -2,11 +2,15 @@ package clientutils
 
 import (
 	"fmt"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/term"
 	"os"
 )
 
-func GetCredentials() (string, string) {
+func GetCredentials(c *cli.Context) (string, string) {
+	if c.String("username") != "" && c.String("password") != "" {
+		return c.String("username"), c.String("password")
+	}
 	// authenticate
 	// ask for username and password
 	fmt.Println("Enter username:")

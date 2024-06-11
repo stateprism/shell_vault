@@ -16,6 +16,8 @@ import (
 )
 
 func refreshCaCertToFile(c *cli.Context) error {
+	username, password := clientutils.GetCredentials(c)
+
 	ctx, cancel := context.WithTimeout(context.Background(), c.Duration("timeout"))
 	defer cancel()
 
@@ -25,6 +27,11 @@ func refreshCaCertToFile(c *cli.Context) error {
 		return err
 	}
 	defer client.Close()
+
+	err = client.Authenticate(ctx, username, password)
+	if err != nil {
+		return err
+	}
 
 	tickRate := c.Duration("refresh-rate")
 
@@ -61,6 +68,8 @@ func refreshCaCertToFile(c *cli.Context) error {
 }
 
 func refreshCaCert(c *cli.Context) error {
+	username, password := clientutils.GetCredentials(c)
+
 	ctx, cancel := context.WithTimeout(context.Background(), c.Duration("timeout"))
 	defer cancel()
 
@@ -70,6 +79,11 @@ func refreshCaCert(c *cli.Context) error {
 		return err
 	}
 	defer client.Close()
+
+	err = client.Authenticate(ctx, username, password)
+	if err != nil {
+		return err
+	}
 
 	cert, ttl, err := client.GetCurrentCert(ctx)
 	if err != nil {
@@ -86,7 +100,7 @@ func refreshCaCert(c *cli.Context) error {
 }
 
 func requestCert(c *cli.Context) error {
-	username, password := clientutils.GetCredentials()
+	username, password := clientutils.GetCredentials(c)
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.Duration("timeout"))
 	defer cancel()
@@ -98,7 +112,7 @@ func requestCert(c *cli.Context) error {
 	}
 	defer client.Close()
 
-	err = client.Authenticate(nil, username, password)
+	err = client.Authenticate(ctx, username, password)
 	if err != nil {
 		return err
 	}
@@ -150,7 +164,7 @@ func requestCert(c *cli.Context) error {
 }
 
 func requestHostCert(c *cli.Context) error {
-	username, password := clientutils.GetCredentials()
+	username, password := clientutils.GetCredentials(c)
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.Duration("timeout"))
 	defer cancel()

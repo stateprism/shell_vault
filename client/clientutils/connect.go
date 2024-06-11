@@ -78,8 +78,8 @@ func (cc *ClientConnection) Authenticate(ctx context.Context, user string, pass 
 	loginData[len(user)] = 0x1E
 	copy(loginData[len(user)+1:], pass)
 	md := metadata.New(map[string]string{"authorization": fmt.Sprintf("local %s", base64.StdEncoding.EncodeToString(loginData))})
-	metadata.NewOutgoingContext(ctx, md)
-	resp, err := cc.client.Authenticate(ctx, &pbcommon.Empty{})
+	rCtx := metadata.NewOutgoingContext(ctx, md)
+	resp, err := cc.client.Authenticate(rCtx, &pbcommon.Empty{})
 	if err != nil {
 		return err
 	}
@@ -120,6 +120,7 @@ func (cc *ClientConnection) RequestUserCert(ctx context.Context, publicKey []byt
 
 	return []byte(resp.GetCert()), err
 }
+
 func (cc *ClientConnection) RequestHostCert(ctx context.Context, publicKey []byte, hostnames []string) ([]byte, error) {
 	cc.lock.Lock()
 	defer cc.lock.Unlock()
@@ -141,6 +142,7 @@ func (cc *ClientConnection) RequestHostCert(ctx context.Context, publicKey []byt
 }
 
 func (cc *ClientConnection) GetCurrentCert(ctx context.Context) (string, int64, error) {
+	ctx = cc.addTokenToRequest(ctx)
 	r, err := cc.client.GetCurrentKey(ctx, &pbcommon.Empty{})
 	if err != nil {
 		return "", 0, err

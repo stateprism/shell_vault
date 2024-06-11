@@ -27,6 +27,18 @@ func main() {
 				Value: 10 * time.Second,
 				Usage: "ttl for any network calls the client makes",
 			},
+			&cli.StringFlag{
+				Name: "username",
+				EnvVars: []string{
+					"SHELL_VAULT_USERNAME",
+				},
+			},
+			&cli.StringFlag{
+				Name: "password",
+				EnvVars: []string{
+					"SHELL_VAULT_PASSWORD",
+				},
+			},
 		},
 		Commands: []*cli.Command{
 			{

@@ -5,21 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b432118a-b097-4db4-a10f-b85e77e41ed9" name="Changes" comment="Works on the container :) nearing mvp state">
-      <change afterPath="$PROJECT_DIR$/.envrc" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/clientutils/prompts.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/server/middleware/audit/audit.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.envrc" beforeDir="false" afterPath="$PROJECT_DIR$/.envrc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/runConfigurations/go_build_github_com_stateprism_shell_vault_client.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/runConfigurations/go_build_github_com_stateprism_shell_vault_client.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.sh" beforeDir="false" afterPath="$PROJECT_DIR$/build.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/actions.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/actions.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client/clientutils/connect.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/clientutils/connect.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libprisma" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libprisma/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/go.mod" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libprisma/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/go.sum" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libprisma/lib.go" beforeDir="false" afterPath="$PROJECT_DIR$/libprisma/lib.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/releaser/setup.sh" beforeDir="false" afterPath="$PROJECT_DIR$/releaser/setup.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rpc/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/rpc/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/server/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/clientutils/prompts.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/clientutils/prompts.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/init.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/init.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/middleware/auth/auth.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/middleware/auth/auth.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -46,30 +41,30 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;DefaultGoTemplateProperty&quot;: &quot;Go File&quot;,
-    &quot;Go Build.go build github.com/stateprism/shell_vault/client.executor&quot;: &quot;Debug&quot;,
-    &quot;Go Build.go build github.com/stateprism/shell_vault/server.executor&quot;: &quot;Run&quot;,
-    &quot;Go Test.TestMap in github.com/stateprism/libprisma.executor&quot;: &quot;Run&quot;,
-    &quot;Go Test.go test github.com/stateprism/libprisma.executor&quot;: &quot;Run&quot;,
-    &quot;Go Test.go test github.com/stateprism/libprisma/cryptoutil/encryption.executor&quot;: &quot;Run&quot;,
-    &quot;Makefile Target.always.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.migrated.go.modules.settings&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.modules.automatic.dependencies.download&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.modules.go.list.on.any.changes.was.set&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;trunk&quot;,
-    &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
-    &quot;go.sdk.automatically.set&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/xadaemon&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "DefaultGoTemplateProperty": "Go File",
+    "Go Build.go build github.com/stateprism/shell_vault/client.executor": "Debug",
+    "Go Build.go build github.com/stateprism/shell_vault/server.executor": "Debug",
+    "Go Test.TestMap in github.com/stateprism/libprisma.executor": "Run",
+    "Go Test.go test github.com/stateprism/libprisma.executor": "Run",
+    "Go Test.go test github.com/stateprism/libprisma/cryptoutil/encryption.executor": "Run",
+    "Makefile Target.always.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.go.formatter.settings.were.checked": "true",
+    "RunOnceActivity.go.migrated.go.modules.settings": "true",
+    "RunOnceActivity.go.modules.automatic.dependencies.download": "true",
+    "RunOnceActivity.go.modules.go.list.on.any.changes.was.set": "true",
+    "git-widget-placeholder": "trunk",
+    "go.import.settings.migrated": "true",
+    "go.sdk.automatically.set": "true",
+    "last_opened_file_path": "/home/xadaemon",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/client" />
@@ -83,7 +78,7 @@
       <recent name="$PROJECT_DIR$" />
     </key>
   </component>
-  <component name="RunManager" selected="Makefile Target.always">
+  <component name="RunManager" selected="Go Build.go build github.com/stateprism/shell_vault/server">
     <configuration name="TestMap in github.com/stateprism/libprisma" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
       <module name="shell_vault" />
       <working_directory value="$PROJECT_DIR$/libprisma" />
@@ -172,5 +167,31 @@
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/server/middleware/auth/auth.go</url>
+          <line>56</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/server/init.go</url>
+          <line>251</line>
+          <option name="timeStamp" value="5" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/server/middleware/auth/auth.go</url>
+          <line>53</line>
+          <option name="timeStamp" value="6" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/server/authproviders/integratedprovider/provider.go</url>
+          <line>144</line>
+          <option name="timeStamp" value="7" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>
