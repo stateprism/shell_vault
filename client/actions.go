@@ -10,7 +10,6 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/term"
 	"os"
 	"strings"
 	"time"
@@ -20,7 +19,7 @@ func refreshCaCertToFile(c *cli.Context) error {
 	ctx, cancel := context.WithTimeout(context.Background(), c.Duration("timeout"))
 	defer cancel()
 
-	client := clientutils.NewClientConnection(ctx)
+	client := clientutils.NewClientConnection()
 	err := client.TryConnect(c.String("addr"))
 	if err != nil {
 		return err
@@ -40,7 +39,7 @@ func refreshCaCertToFile(c *cli.Context) error {
 		case t := <-tick:
 			go func() {
 				fmt.Println("Refreshing certificate at", t)
-				cert, ttl, err := client.GetCurrentCert()
+				cert, ttl, err := client.GetCurrentCert(ctx)
 				if err != nil {
 					errChan <- err
 				}
@@ -65,14 +64,14 @@ func refreshCaCert(c *cli.Context) error {
 	ctx, cancel := context.WithTimeout(context.Background(), c.Duration("timeout"))
 	defer cancel()
 
-	client := clientutils.NewClientConnection(ctx)
+	client := clientutils.NewClientConnection()
 	err := client.TryConnect(c.String("addr"))
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 
-	cert, ttl, err := client.GetCurrentCert()
+	cert, ttl, err := client.GetCurrentCert(ctx)
 	if err != nil {
 		return err
 	}
@@ -87,37 +86,19 @@ func refreshCaCert(c *cli.Context) error {
 }
 
 func requestCert(c *cli.Context) error {
-	fmt.Println("Requesting certificate")
-
-	// authenticate
-	// ask for username and password
-	fmt.Println("Enter username:")
-	var username string
-	_, err := fmt.Scan(&username)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Enter password:")
-	var password string
-	pw, err := term.ReadPassword(int(os.Stdin.Fd()))
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println()
-	password = string(pw)
+	username, password := clientutils.GetCredentials()
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.Duration("timeout"))
 	defer cancel()
 
-	client := clientutils.NewClientConnection(ctx)
-	err = client.TryConnect(c.String("addr"))
+	client := clientutils.NewClientConnection()
+	err := client.TryConnect(c.String("addr"))
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 
-	err = client.Authenticate(username, password)
+	err = client.Authenticate(nil, username, password)
 	if err != nil {
 		return err
 	}
@@ -142,7 +123,7 @@ func requestCert(c *cli.Context) error {
 		return err
 	}
 
-	certBytes, err := client.RequestUserCert(key.Marshal())
+	certBytes, err := client.RequestUserCert(ctx, key.Marshal())
 	if err != nil {
 		return err
 	}
@@ -166,4 +147,81 @@ func requestCert(c *cli.Context) error {
 	fmt.Printf("Got certificate valid for: %s\n", time.Unix(int64(cert.ValidBefore), 0).Sub(time.Now()))
 
 	return nil
+}
+
+func requestHostCert(c *cli.Context) error {
+	username, password := clientutils.GetCredentials()
+
+	ctx, cancel := context.WithTimeout(context.Background(), c.Duration("timeout"))
+	defer cancel()
+
+	client := clientutils.NewClientConnection()
+	err := client.TryConnect(c.String("addr"))
+	if err != nil {
+		return err
+	}
+
+	err = client.Authenticate(ctx, username, password)
+	if err != nil {
+		return err
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
+	keys, err := loadHostKeys(c)
+	if err != nil {
+		return err
+	}
+
+	var cancellations []context.CancelFunc
+	for _, key := range keys {
+		ctx, cancel := context.WithTimeout(context.Background(), c.Duration("timeout"))
+		cancellations = append(cancellations, cancel)
+
+		certBytes, err := client.RequestHostCert(ctx, key.Marshal(), []string{hostname})
+		if err != nil {
+			return err
+		}
+
+		var certK ssh.PublicKey
+		certK, _, _, _, err = ssh.ParseAuthorizedKey(certBytes)
+		if err != nil {
+			return err
+		}
+		cert := certK.(*ssh.Certificate)
+		err = os.WriteFile(c.Path("output")+".cert.pub", certBytes, 0600)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("Got certificate valid for: %s\n", time.Unix(int64(cert.ValidBefore), 0).Sub(time.Now()))
+	}
+
+	for _, cf := range cancellations {
+		cf()
+	}
+
+	return nil
+}
+
+func loadHostKeys(c *cli.Context) ([]ssh.PublicKey, error) {
+	keys := make([]ssh.PublicKey, 0)
+	for _, path := range c.StringSlice("host-keys") {
+		keyBytes, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+
+		key, _, _, _, err := ssh.ParseAuthorizedKey(keyBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		keys = append(keys, key)
+	}
+
+	return keys, nil
 }

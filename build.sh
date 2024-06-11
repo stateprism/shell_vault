@@ -13,10 +13,9 @@ for os in "${GOOS_LIST[@]}"; do
   for arch in "${GOARCH_LIST[@]}"; do
     echo "Building for $os $arch..."
     GOOS=$os GOARCH=$arch make build
-    mkdir "release_${os}_$arch"
-    mv bin/* "release_${os}_$arch"
-    upx "${UPX_FLAGS[@]}" release_${os}_$arch/*
-
+    mkdir "release_${os}_${arch}"
+    mv bin/* "release_${os}_${arch}"
+    upx "${UPX_FLAGS[@]}" release_${os}_${arch}/*
   done
 done
 

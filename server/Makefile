@@ -1,6 +1,3 @@
-PATH:=$(PATH):$(shell go env GOPATH)/bin
-CGO_ENABLED:=1
-
 BUILD_COMMIT:=$(shell git log --pretty=format:'%cs.%H' -n 1)
 BUILD_DATE:=$(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 VERSION:=$(shell cat version.txt)

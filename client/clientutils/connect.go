@@ -19,17 +19,15 @@ type ClientConnection struct {
 	token           string
 	client          pb.CertificateAuthorityClient
 	conn            *grpc.ClientConn
-	ctx             context.Context
 	isAuthenticated bool
 }
 
-func NewClientConnection(ctx context.Context) *ClientConnection {
+func NewClientConnection() *ClientConnection {
 	return &ClientConnection{
 		lock:            sync.Mutex{},
 		token:           "",
 		client:          nil,
 		isAuthenticated: false,
-		ctx:             ctx,
 	}
 }
 
@@ -68,7 +66,7 @@ func (cc *ClientConnection) Close() {
 	cc.client = nil
 }
 
-func (cc *ClientConnection) Authenticate(user string, pass string) error {
+func (cc *ClientConnection) Authenticate(ctx context.Context, user string, pass string) error {
 	cc.lock.Lock()
 	defer cc.lock.Unlock()
 
@@ -80,7 +78,7 @@ func (cc *ClientConnection) Authenticate(user string, pass string) error {
 	loginData[len(user)] = 0x1E
 	copy(loginData[len(user)+1:], pass)
 	md := metadata.New(map[string]string{"authorization": fmt.Sprintf("local %s", base64.StdEncoding.EncodeToString(loginData))})
-	ctx := metadata.NewOutgoingContext(cc.ctx, md)
+	metadata.NewOutgoingContext(ctx, md)
 	resp, err := cc.client.Authenticate(ctx, &pbcommon.Empty{})
 	if err != nil {
 		return err
@@ -88,7 +86,6 @@ func (cc *ClientConnection) Authenticate(user string, pass string) error {
 
 	cc.token = resp.GetAuthToken()
 	cc.isAuthenticated = true
-	cc.ctx = metadata.NewOutgoingContext(cc.ctx, metadata.New(map[string]string{"authorization": fmt.Sprintf("encrypted %s", cc.token)}))
 	return nil
 }
 
@@ -96,15 +93,25 @@ func (cc *ClientConnection) GetToken() string {
 	return cc.token
 }
 
-func (cc *ClientConnection) RequestUserCert(publicKey []byte) ([]byte, error) {
+func (cc *ClientConnection) addTokenToRequest(parent context.Context) context.Context {
+	if !cc.isAuthenticated {
+		panic("you must be authenticated to make this request")
+	}
+	md := metadata.New(map[string]string{"authorization": fmt.Sprintf("encrypted %s", cc.token)})
+	return metadata.NewOutgoingContext(parent, md)
+}
+
+func (cc *ClientConnection) RequestUserCert(ctx context.Context, publicKey []byte) ([]byte, error) {
 	cc.lock.Lock()
-	cc.lock.Unlock()
+	defer cc.lock.Unlock()
+
+	ctx = cc.addTokenToRequest(ctx)
 
 	if cc.client == nil {
 		return nil, errors.New("not connected")
 	}
 
-	resp, err := cc.client.RequestUserCertificate(cc.ctx, &pb.UserCertRequest{
+	resp, err := cc.client.RequestUserCertificate(ctx, &pb.UserCertRequest{
 		PublicKey: publicKey,
 	})
 	if err != nil {
@@ -113,15 +120,17 @@ func (cc *ClientConnection) RequestUserCert(publicKey []byte) ([]byte, error) {
 
 	return []byte(resp.GetCert()), err
 }
-func (cc *ClientConnection) RequestHostCert(publicKey []byte, hostnames []string) ([]byte, error) {
+func (cc *ClientConnection) RequestHostCert(ctx context.Context, publicKey []byte, hostnames []string) ([]byte, error) {
 	cc.lock.Lock()
-	cc.lock.Unlock()
+	defer cc.lock.Unlock()
+
+	ctx = cc.addTokenToRequest(ctx)
 
 	if cc.client == nil {
 		return nil, errors.New("not connected")
 	}
 
-	resp, err := cc.client.RequestUserCertificate(cc.ctx, &pb.UserCertRequest{
+	resp, err := cc.client.RequestUserCertificate(ctx, &pb.UserCertRequest{
 		PublicKey: publicKey,
 	})
 	if err != nil {
@@ -131,8 +140,8 @@ func (cc *ClientConnection) RequestHostCert(publicKey []byte, hostnames []string
 	return []byte(resp.GetCert()), err
 }
 
-func (cc *ClientConnection) GetCurrentCert() (string, int64, error) {
-	r, err := cc.client.GetCurrentKey(cc.ctx, &pbcommon.Empty{})
+func (cc *ClientConnection) GetCurrentCert(ctx context.Context) (string, int64, error) {
+	r, err := cc.client.GetCurrentKey(ctx, &pbcommon.Empty{})
 	if err != nil {
 		return "", 0, err
 	}

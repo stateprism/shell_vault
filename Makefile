@@ -1,19 +1,16 @@
-PATH:=$(PATH):$(shell go env GOPATH)/bin
-
 # Default target
-all: build
+always: FORCE server client
 
-build: server client
-
-server: proto
+server: FORCE
 	$(MAKE) -C server
 
-client: proto
+client: FORCE server
 	$(MAKE) -C client
 
-proto:
+proto: FORCE
 	$(MAKE) -C rpc
 
-
-clean:
+clean: FORCE
 	rm -rf bin/
+
+FORCE:

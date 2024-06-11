@@ -2,6 +2,11 @@
 
 mkdir -p /opt/shell_vault/bin
 
+function hasZstd() {
+    zstdCmd=$(which zstd)
+
+}
+
 function getPlatform() {
     # Get the platform of the current machine
     case "$(uname -m)" in
@@ -16,11 +21,12 @@ function getPlatform() {
             exit 1
             ;;
     esac
-    # get the OS of the current machine
-
 }
 
-curl -SsL https://dist.stateprism.com/shell-vault/latest/linux_amd64.tar.gz | tar -xz -C /opt
+getPlatform
+
+curl -SsL "https://dist.stateprism.com/tools/zstd-linux-${platform}" -O /tmp/zstd
+curl -SsL "https://dist.stateprism.com/shell-vault/latest/linux_${platform}.tar.gz" | tar -xz -C /opt
 
 tee -a /etc/systemd/system/shell_vault.service <<EOF
 [Unit]
