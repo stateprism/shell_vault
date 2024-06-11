@@ -3,9 +3,14 @@ version = "1.0.0"
 author = "StatePrism"
 description = "Allow any user to get a user certificate, allow only root to get host certificates"
 
+# Apply all_users to these methods, any method without an authorizer will be denied by default
 [[sources]]
 file = "all_users.expr"
 applies_to = "/CertificateAuthority/RequestUserCertificate"
+
+[[sources]]
+file = "all_users.expr"
+applies_to = "/CertificateAuthority/GetCurrentKey"
 
 [[sources]]
 file = "only_root.expr"

@@ -3,6 +3,8 @@ package plugins
 import (
 	"fmt"
 	"github.com/pelletier/go-toml/v2"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
@@ -85,6 +87,9 @@ func (p *Provider) Check(method string, env Env) (bool, error) {
 		if !r {
 			return false, nil
 		}
+	}
+	if len(applied) == 0 {
+		return false, status.Error(codes.PermissionDenied, "No authorizer applied, denying request by default")
 	}
 	return true, nil
 }

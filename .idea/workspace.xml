@@ -5,16 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b432118a-b097-4db4-a10f-b85e77e41ed9" name="Changes" comment="Works on the container :) nearing mvp state">
-      <change afterPath="$PROJECT_DIR$/server/middleware/audit/audit.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.envrc" beforeDir="false" afterPath="$PROJECT_DIR$/.envrc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/runConfigurations/go_build_github_com_stateprism_shell_vault_client.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/runConfigurations/go_build_github_com_stateprism_shell_vault_client.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/actions.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/actions.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/clientutils/connect.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/clientutils/connect.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/clientutils/prompts.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/clientutils/prompts.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/init.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/init.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server/middleware/auth/auth.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/middleware/auth/auth.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev_root/etc/shell_vault/authorizers/local_auth/manifest.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dev_root/etc/shell_vault/authorizers/local_auth/manifest.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/plugins/plugins.go" beforeDir="false" afterPath="$PROJECT_DIR$/server/plugins/plugins.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -167,31 +160,5 @@
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/server/middleware/auth/auth.go</url>
-          <line>56</line>
-          <option name="timeStamp" value="2" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/server/init.go</url>
-          <line>251</line>
-          <option name="timeStamp" value="5" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/server/middleware/auth/auth.go</url>
-          <line>53</line>
-          <option name="timeStamp" value="6" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/server/authproviders/integratedprovider/provider.go</url>
-          <line>144</line>
-          <option name="timeStamp" value="7" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>
