@@ -1,6 +1,8 @@
 # Default target
 always: FORCE server client
 
+build: server client
+
 server: FORCE
 	$(MAKE) -C server
 

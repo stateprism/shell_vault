@@ -1,4 +1,4 @@
-module github.com/stateprism/shell_vault/server
+module github.com/xadaemon/shell_vault/server
 
 go 1.22.3
 

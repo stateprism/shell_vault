@@ -1,4 +1,4 @@
-module github.com/stateprism/shell_vault/client
+module github.com/xadaemon/shell_vault/client
 
 replace (
 	github.com/stateprism/libprisma => ../libprisma

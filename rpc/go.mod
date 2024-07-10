@@ -1,4 +1,4 @@
-module github.com/stateprism/shell_vault/rpc
+module github.com/xadaemon/shell_vault/rpc
 
 go 1.22.3
 

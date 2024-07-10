@@ -2,7 +2,7 @@
 
 
 UPX_FLAGS=("--lzma")
-GOOS_LIST=("windows" "linux" "darwin")
+GOOS_LIST=("windows" "linux")
 GOARCH_LIST=("amd64" "arm64")
 
 make clean
