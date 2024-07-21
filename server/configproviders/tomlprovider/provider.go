@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/pelletier/go-toml/v2"
-	"github.com/stateprism/libprisma/memkv"
-	"github.com/stateprism/shell_vault/server/providers"
+	"github.com/xadaemon/libprisma/memkv"
+	"github.com/xadaemon/shell_vault/server/providers"
 	"os"
 	"path"
 )

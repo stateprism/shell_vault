@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stateprism/shell_vault/server/lib"
+	"github.com/xadaemon/shell_vault/server/lib"
 )
 
 type KeyType int

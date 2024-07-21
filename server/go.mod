@@ -3,8 +3,8 @@ module github.com/xadaemon/shell_vault/server
 go 1.22.3
 
 replace (
-	github.com/stateprism/libprisma => ../libprisma
-	github.com/stateprism/shell_vault/rpc => ../rpc
+	github.com/xadaemon/libprisma => ../libprisma
+	github.com/xadaemon/shell_vault/rpc => ../rpc
 )
 
 require (
@@ -14,7 +14,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/pelletier/go-toml/v2 v2.2.2
-	github.com/stateprism/libprisma v0.0.0-00010101000000-000000000000
+	github.com/xadaemon/libprisma v0.0.0-00010101000000-000000000000
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	go.uber.org/fx v1.22.0
 	golang.org/x/crypto v0.24.0
@@ -28,7 +28,7 @@ require (
 )
 
 require (
-	github.com/stateprism/shell_vault/rpc v0.0.0-00010101000000-000000000000
+	github.com/xadaemon/shell_vault/rpc v0.0.0-00010101000000-000000000000
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.22.0 // indirect

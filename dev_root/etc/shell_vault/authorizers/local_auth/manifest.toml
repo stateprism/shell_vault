@@ -1,6 +1,6 @@
 name = "Base local auth provider rules"
 version = "1.0.0"
-author = "StatePrism"
+author = "xadaemon"
 description = "Allow any user to get a user certificate, allow only root to get host certificates"
 
 # Apply all_users to these methods, any method without an authorizer will be denied by default

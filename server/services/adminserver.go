@@ -2,12 +2,12 @@ package services
 
 import (
 	"context"
-	pbcommon "github.com/stateprism/shell_vault/rpc/common"
+	pbcommon "github.com/xadaemon/shell_vault/rpc/common"
 	"time"
 
 	"github.com/google/uuid"
-	pb "github.com/stateprism/shell_vault/rpc/adminproto"
-	"github.com/stateprism/shell_vault/server/providers"
+	pb "github.com/xadaemon/shell_vault/rpc/adminproto"
+	"github.com/xadaemon/shell_vault/server/providers"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

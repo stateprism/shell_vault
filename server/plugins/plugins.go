@@ -8,7 +8,7 @@ import (
 
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
-	"github.com/stateprism/shell_vault/server/providers"
+	"github.com/xadaemon/shell_vault/server/providers"
 	"go.uber.org/zap"
 	"os"
 	"path"

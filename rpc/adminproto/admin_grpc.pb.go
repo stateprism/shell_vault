@@ -8,7 +8,7 @@ package adminproto
 
 import (
 	context "context"
-	common "github.com/stateprism/shell_vault/rpc/common"
+	common "github.com/xadaemon/shell_vault/rpc/common"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"

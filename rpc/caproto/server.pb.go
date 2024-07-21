@@ -7,7 +7,7 @@
 package caproto
 
 import (
-	common "github.com/stateprism/shell_vault/rpc/common"
+	common "github.com/xadaemon/shell_vault/rpc/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"

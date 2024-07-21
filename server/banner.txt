@@ -2,6 +2,6 @@ Shell Vault
 SSH Access Control System
 Version %s
 
-For manuals, documentation, and support, visit https://stateprism.com
+For manuals, documentation, and support, visit https://xadaemon.com
 
 Copyright (c) %d State Prism, All rights reserved

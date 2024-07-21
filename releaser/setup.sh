@@ -25,8 +25,8 @@ function getPlatform() {
 
 getPlatform
 
-curl -SsL "https://dist.stateprism.com/tools/zstd-linux-${platform}" -O /tmp/zstd
-curl -SsL "https://dist.stateprism.com/shell-vault/latest/linux_${platform}.tar.gz" | tar -xz -C /opt
+curl -SsL "https://dist.xadaemon.com/tools/zstd-linux-${platform}" -O /tmp/zstd
+curl -SsL "https://dist.xadaemon.com/shell-vault/latest/linux_${platform}.tar.gz" | tar -xz -C /opt
 
 tee -a /etc/systemd/system/shell_vault.service <<EOF
 [Unit]

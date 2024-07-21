@@ -1,7 +1,7 @@
 syntax = "proto3";
 import "common/common.proto";
 
-option go_package = "github.com/stateprism/shell_vault/rpc/caproto";
+option go_package = "github.com/xadaemon/shell_vault/rpc/caproto";
 
 service CertificateAuthority {
   rpc GetConfig(ConfigRequest) returns (ConfigReply) {}
